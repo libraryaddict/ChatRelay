@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "experimentalDecorators": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "declaration": false,
+    "forceConsistentCasingInFileNames": true,
+    "module": "commonjs",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "strictPropertyInitialization": false,
+    "pretty": true,
+    "strict": true,
+    "lib": ["esnext"],
+    "target": "esnext"
+  },
+  "include": ["src/**/*.ts"],
+  "isolatedModules": true /* Transpile each file as a separate module (similar to 'ts.transpileModule'). */
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "message": "Welcome back to the Kingdom of Loathing. Noob.",
+    "responses": [
+      "Frankly, I didn't expect {name} to figure out how to get out of valhalla",
+      "Took you long enough",
+      "{name} you definitely qualify for a newbie gift package, but we're all out",
+      "Welcome back to the Clan. Weakling.",
+      "Holy, you're incredibly good lo- oh. Its you. I'd recognize that personality anywhere.",
+      "Speed running certainly isn't your forte eh?",
+      "{name} I thought you left us for good, we were about to throw a party..",
+      "Congrats on ascending, don't let the door hit your ego",
+      "Oh nice, I hope you picked a good class? ... Nevermind. I spoke too soon.",
+      "Last time you got your first scar taking a drink of water, what's this time. Breathing air?",
+      "{name} are you interested in a life insurance policy? We can see you don't cash them in",
+      "You must've done something naughty in your last life to ascend this soon",
+      "About time, we were starting to suspect that valhalla was literal for you"
+    ]
+  },
+  {
+    "message": "praise the lord",
+    "responses": ["Hallelujah!"]
+  },
+  {
+    "message": "Is there anyone online?",
+    "responses": ["no", "nope", "Na", "Try again"]
+  }
+]

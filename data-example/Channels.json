@@ -1,0 +1,37 @@
+{
+  "groups": [
+    {
+      "name": "Interclan",
+      "channels": [
+        "kol/clan/AvgChat",
+        "kol/clan/BrewChat",
+        "kol/clan/EtherealChat",
+        "kol/clan/LancesChat",
+        "kol/clan/SmurfChat"
+      ]
+    }
+  ],
+
+  "channels": [
+    {
+      "id": "DiscordClan",
+      "owner": "Discord",
+      "side": "Discord",
+      "holderId": "1234567",
+      "channelId": "1234567",
+      "webhook": "<Webhook>",
+      "listensTo": ["kol/clan/IrratTrade"],
+      "flags": ["responses"]
+    },
+    {
+      "id": "kol/clan/IrratTrade",
+      "owner": "IrratTrade",
+      "name": "Name goes here",
+      "icon": "<Link to image>",
+      "side": "KoL",
+      "holderId": "clan",
+      "listensTo": ["DiscordClan"],
+      "flags": ["responses"]
+    }
+  ]
+}

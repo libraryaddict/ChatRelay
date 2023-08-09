@@ -1,0 +1,11 @@
+{
+  "discordToken": "SECREK_TOKEN",
+  "kolLogins": [
+    {
+      "username": "Prince Libraryaddict",
+      "password": "princelib12345",
+      "type": "PUBLIC"
+    }
+  ],
+  "ignoreChat": []
+}

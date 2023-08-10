@@ -19,7 +19,7 @@ Obviously while its using those kol accounts, you can't use them.
 If you want profanity in your chat, toggle it in the kol settings first.
 The kol accounts must have access to chat, which needs verified email and to pass the literacy test. I'm not doing that for you.
 
-There are three settings files.
+There are three settings files. They must be copied from `data-example` to `data` folder.
 
 # Channels.json
 

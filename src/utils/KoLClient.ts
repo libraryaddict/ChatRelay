@@ -604,21 +604,16 @@ export class KoLClient implements ChatChannel {
 
       console.log("Found a consult for user ID: " + userId);
 
-      const promise = this.visitUrl(
-        "clan_viplounge.php",
-        {
-          q1: "beer",
-          q2: "robin",
-          q3: "thin",
-          preaction: "dotestlove",
-          testlove: userId,
-          option: "1",
+      const promise = axios("https://www.kingdomofloathing.com/clan_viplounge.php", {
+        maxRedirects: 0,
+        withCredentials: true,
+        headers: {
+          cookie: this._credentials?.sessionCookies || "",
         },
-        false,
-        null,
-        "GET"
-      ).then((s) => {
-        if ((s as string).includes("We'll calculate your results")) success++;
+        params: { q1: "beer", q2: "robin", q3: "thin", preaction: "dotestlove", testlove: userId },
+        validateStatus: (status) => status === 302 || status === 200,
+      }).then((s) => {
+        if (s.data.includes("We'll calculate your results")) success++;
         else fail++;
       });
 

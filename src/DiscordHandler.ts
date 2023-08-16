@@ -76,12 +76,18 @@ export class DiscordHandler implements ChatChannel {
           username: message.from.name,
           avatarURL: message.from.icon,
           content: msg,
-          options: { flags: MessageFlags.SuppressNotifications, allowedMentions: {} },
+          options: {
+            flags: ["SuppressEmbeds", "SuppressNotifications"],
+            allowedMentions: {},
+          },
         });
       } else {
         await (channel as TextBasedChannel).send({
           content: msg,
-          options: { flags: MessageFlags.SuppressNotifications, allowedMentions: {} },
+          options: {
+            flags: ["SuppressEmbeds", "SuppressNotifications"],
+            allowedMentions: {},
+          },
         });
       }
     });

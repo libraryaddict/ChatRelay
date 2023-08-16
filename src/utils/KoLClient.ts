@@ -89,6 +89,11 @@ export class KoLClient implements ChatChannel {
       return;
     }
 
+    // Don't send bot messages to kol, this is a dumb hack for `sendBotMessage`
+    if (message.formatting == "bot") {
+      return;
+    }
+
     let msg = `[${message.sender}] ${message.message}`;
 
     if (message.formatting == "emote") {

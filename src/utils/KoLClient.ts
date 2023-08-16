@@ -43,7 +43,7 @@ export class KoLClient implements ChatChannel {
   private messageProcessingMutex = new Mutex();
   private lastAntidoteBeg = 0;
   private lastStatusCheck = 0;
-  private noFortuneTeller: boolean;
+  private fortuneTeller: "UNTESTED" | "EXISTS" | "DOESNT EXIST" = "UNTESTED";
 
   constructor(
     chatManager: ChatManager,
@@ -570,23 +570,23 @@ export class KoLClient implements ChatChannel {
   }
 
   async checkFortuneTeller() {
-    // Only return if true
-    if (this.noFortuneTeller == true) {
+    if (this.fortuneTeller == "DOESNT EXIST") {
       return;
     }
 
     let page: string = await this.visitUrl("clan_viplounge.php", { preaction: "lovetester" });
 
     // Only set to true if we're explicitly denied entry
-    if (this.noFortuneTeller == null && page.includes("You attempt to sneak into the VIP Lounge")) {
-      this.noFortuneTeller = true;
+    if (this.fortuneTeller == null && page.includes("You attempt to sneak into the VIP Lounge")) {
+      this.fortuneTeller = "DOESNT EXIST";
+      return;
     }
 
     page = (await this.visitUrl("choice.php", { forceoption: "0" })) as string;
 
     // Only set to false if we've explicitly seen the teller
-    if (this.noFortuneTeller == null && page.includes("Madame Zatara")) {
-      this.noFortuneTeller = false;
+    if (this.fortuneTeller == "UNTESTED" && page.includes("Madame Zatara")) {
+      this.fortuneTeller = "EXISTS";
     }
 
     const promises = [];

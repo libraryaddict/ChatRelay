@@ -11,12 +11,14 @@ import { Command } from "./discord/DiscordCommand";
 import { ChannelId, ChatChannel, ChatMessage } from "./utils/Typings";
 import { ChatManager } from "./ChatManager";
 import { unemojify } from "node-emoji";
+import { Mutex } from "async-mutex";
 
 export class DiscordHandler implements ChatChannel {
   client: Client;
   commands: Command[];
   chatManager: ChatManager;
   token: string;
+  mutex: Mutex = new Mutex();
 
   constructor(chatManager: ChatManager, token: string) {
     this.token = token;
@@ -28,59 +30,61 @@ export class DiscordHandler implements ChatChannel {
   }
 
   async sendMessageToChannel(target: ChannelId, message: ChatMessage) {
-    if (this.client == null || !this.client.isReady()) {
-      console.log("Unable to send message to discord, discord ain't available");
-      return;
-    }
+    await this.mutex.runExclusive(async () => {
+      if (this.client == null || !this.client.isReady()) {
+        console.log("Unable to send message to discord, discord ain't available");
+        return;
+      }
 
-    const guild = await this.client.guilds.fetch(target.holderId);
+      const guild = await this.client.guilds.fetch(target.holderId);
 
-    if (guild == null) {
-      console.log("Can't find guild");
-      return;
-    }
+      if (guild == null) {
+        console.log("Can't find guild");
+        return;
+      }
 
-    const channel = await guild.channels.fetch(target.channelId as string);
+      const channel = await guild.channels.fetch(target.channelId as string);
 
-    if (channel == null) {
-      console.log("Can't find channel");
-      return;
-    }
+      if (channel == null) {
+        console.log("Can't find channel");
+        return;
+      }
 
-    let rawMessage = message.message;
-    rawMessage = rawMessage.replaceAll(/([*_~])/g, "\\$1");
+      let rawMessage = message.message;
+      rawMessage = rawMessage.replaceAll(/([*_~])/g, "\\$1");
 
-    const sender = message.sender;
+      const sender = message.sender;
 
-    let msg = `**[${sender}]** ${rawMessage}`;
+      let msg = `**[${sender}]** ${rawMessage}`;
 
-    if (message.formatting == "emote") {
-      rawMessage = rawMessage.replace(sender + " ", "");
-      msg = `**[${sender}]** ${rawMessage}`;
-      msg = `*${msg}*`;
-    } else if (message.formatting == "mod announcement") {
-      msg = `__${msg}__`;
-    } else if (message.formatting == "mod warning") {
-      msg = `__**${`[${sender}] ${rawMessage}`}**__`;
-    } else if (message.formatting == "system") {
-      msg = `**${msg}**`;
-    }
+      if (message.formatting == "emote") {
+        rawMessage = rawMessage.replace(sender + " ", "");
+        msg = `**[${sender}]** ${rawMessage}`;
+        msg = `*${msg}*`;
+      } else if (message.formatting == "mod announcement") {
+        msg = `__${msg}__`;
+      } else if (message.formatting == "mod warning") {
+        msg = `__**${`[${sender}] ${rawMessage}`}**__`;
+      } else if (message.formatting == "system") {
+        msg = `**${msg}**`;
+      }
 
-    if (target.webhook != null) {
-      const webhook = new WebhookClient({ url: target.webhook });
+      if (target.webhook != null) {
+        const webhook = new WebhookClient({ url: target.webhook });
 
-      await webhook.send({
-        username: message.from.name,
-        avatarURL: message.from.icon,
-        content: msg,
-        options: { flags: MessageFlags.SuppressNotifications, allowedMentions: {} },
-      });
-    } else {
-      await (channel as TextBasedChannel).send({
-        content: msg,
-        options: { flags: MessageFlags.SuppressNotifications, allowedMentions: {} },
-      });
-    }
+        await webhook.send({
+          username: message.from.name,
+          avatarURL: message.from.icon,
+          content: msg,
+          options: { flags: MessageFlags.SuppressNotifications, allowedMentions: {} },
+        });
+      } else {
+        await (channel as TextBasedChannel).send({
+          content: msg,
+          options: { flags: MessageFlags.SuppressNotifications, allowedMentions: {} },
+        });
+      }
+    });
   }
 
   start() {

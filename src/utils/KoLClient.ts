@@ -42,7 +42,8 @@ export class KoLClient implements ChatChannel {
   private mutex = new Mutex();
   private messageProcessingMutex = new Mutex();
   private lastAntidoteBeg = 0;
-  private lastEffectCheck = 0;
+  private lastStatusCheck = 0;
+  private noFortuneTeller: boolean;
 
   constructor(
     chatManager: ChatManager,
@@ -68,13 +69,14 @@ export class KoLClient implements ChatChannel {
     }
   }
 
-  async doEffectCheck() {
-    if (this.lastEffectCheck > Date.now() || this._isRollover) return;
+  async doStatusCheck() {
+    if (this.lastStatusCheck > Date.now() || this._isRollover) return;
 
     // Every hour
-    this.lastEffectCheck = Date.now() + 1000 * 60 * 60;
+    this.lastStatusCheck = Date.now() + 1000 * 60 * 60;
 
-    this.removeBadEffects();
+    await this.removeBadEffects();
+    await this.checkFortuneTeller();
   }
 
   isOwner(channelId: ChannelId): boolean {
@@ -202,7 +204,7 @@ export class KoLClient implements ChatChannel {
     return effects;
   }
 
-  sendBotMessage(message: string) {
+  async sendBotMessage(message: string) {
     const channel = this.channels.find((c) => c.holderId == "clan");
 
     if (channel == null) {
@@ -210,7 +212,7 @@ export class KoLClient implements ChatChannel {
       return;
     }
 
-    this.chatManager.onChat({
+    await this.chatManager.onChat({
       from: channel,
       formatting: "bot",
       sender: this.getUsername() ?? "Me the bot",
@@ -567,18 +569,59 @@ export class KoLClient implements ChatChannel {
     }
   }
 
+  async checkFortuneTeller() {
+    // Only return if true
+    if (this.noFortuneTeller == true) {
+      return;
+    }
+
+    let page: string = await this.visitUrl("clan_viplounge.php", { preaction: "lovetester" });
+
+    // Only set to true if we're explicitly denied entry
+    if (this.noFortuneTeller == null && page.includes("You attempt to sneak into the VIP Lounge")) {
+      this.noFortuneTeller = true;
+    }
+
+    page = (await this.visitUrl("choice.php", { forceoption: "0" })) as string;
+
+    // Only set to false if we've explicitly seen the teller
+    if (this.noFortuneTeller == null && page.includes("Madame Zatara")) {
+      this.noFortuneTeller = false;
+    }
+
+    const promises = [];
+
+    for (const match of page.matchAll(/clan_viplounge\.php\?preaction=testlove&testlove=(\d+)/g)) {
+      const userId = match[1];
+
+      const promise = this.visitUrl(`clan_viplounge.php`, {
+        q1: "beer",
+        q2: "robin",
+        q3: "thin",
+        preaction: "dotestlove",
+        testlove: userId,
+      });
+
+      promises.push(promise);
+    }
+
+    // We do promises so we're not accidentally messing up something else
+    await Promise.allSettled(promises);
+  }
+
   async processMessage(): Promise<void> {
     const message = this.messages.shift();
 
     if (!message) {
+      // Only run a status check when we're not processing anything
+      if (!this.messageProcessingMutex.isLocked() && !this.mutex.isLocked()) this.doStatusCheck();
+
       setTimeout(() => this.processMessage(), 1000);
       return;
     }
 
     try {
-      this.messageProcessingMutex.runExclusive(() => {
-        this.doEffectCheck();
-
+      this.messageProcessingMutex.runExclusive(async () => {
         // pvp radio
         if (message != null && message.who != null && message.who.id == "-69") return;
 
@@ -597,9 +640,18 @@ export class KoLClient implements ChatChannel {
 
         // {"msgs":[{"type":"event","msg":"<a href='showplayer.php?who=3469406' target=mainpane class=nounder style='color: green'>Irrat<\/a> has hit you with a cartoon harpoon!<!--refresh-->","link":false,"time":"1690528121"}],"last":"1534646135","delay":3000}
 
+        // {"msgs":[{"type":"event","msg":"You have been invited to <a style='color: green' target='mainpane' href='clan_viplounge.php?preaction=testlove&testlove=3257284'>consult Madame Zatara about your relationship<\/a> with Rosemary Gulasch.","link":false,"time":"1692188076"}],"last":"1535503834","delay":3000}
+
         if (message.type == "event" && message.msg?.includes("<!--refresh-->")) {
           this.sendBotMessage(stripHtml(message.msg));
-          this.removeBadEffects();
+          await this.removeBadEffects();
+        }
+
+        if (
+          message.type == "event" &&
+          message.msg?.includes("href='clan_viplounge.php?preaction")
+        ) {
+          await this.checkFortuneTeller();
         }
 
         if (message.who == null || message.channel == null || message.msg == null) return;

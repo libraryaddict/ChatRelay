@@ -121,7 +121,7 @@ export class KoLClient implements ChatChannel {
       })
     )["output"] as string;
 
-    console.log("`" + response + "`");
+    //console.log("`" + response + "`");
 
     const match = response.match(/ channel <b>([a-z]+)<\/b>(?: and listening to <b>(.*?)<\/b>)/);
 
@@ -576,9 +576,7 @@ export class KoLClient implements ChatChannel {
   }
 
   async checkFortuneTeller() {
-    console.log("Now checking fortune teller");
     if (this.fortuneTeller == "DOESNT EXIST") {
-      console.log("Not checking, doesn't exist");
       return;
     }
 
@@ -587,7 +585,6 @@ export class KoLClient implements ChatChannel {
     // Only set to true if we're explicitly denied entry
     if (this.fortuneTeller == null && page.includes("You attempt to sneak into the VIP Lounge")) {
       this.fortuneTeller = "DOESNT EXIST";
-      console.log("Just checked and we're told we don't have access to VIP lounge");
       return;
     }
 
@@ -595,54 +592,26 @@ export class KoLClient implements ChatChannel {
 
     // Only set to false if we've explicitly seen the teller
     if (this.fortuneTeller == "UNTESTED" && page.includes("Madame Zatara")) {
-      console.log("Just checked and we have access to fortune teller");
       this.fortuneTeller = "EXISTS";
     }
 
     const promises = [];
-    console.log("Now checking consults..");
-    let success = 0;
-    let fail = 0;
 
     for (const match of page.matchAll(/clan_viplounge\.php\?preaction=testlove&testlove=(\d+)/g)) {
       const userId = match[1];
 
-      console.log("Found a consult for user ID: " + userId);
-
-      const promise = axios("https://www.kingdomofloathing.com/clan_viplounge.php", {
-        method: "POST",
-        maxRedirects: 0,
-        withCredentials: true,
-        headers: {
-          cookie: this._credentials?.sessionCookies || "",
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        params: {
-          q1: "beer",
-          q2: "robin",
-          q3: "thin",
-          preaction: "dotestlove",
-          testlove: userId,
-          option: 1,
-          pwd: this._credentials?.pwdhash,
-        },
-        validateStatus: (status) => status === 302 || status === 200,
-      }).then((s) => {
-        if (s.data.includes("We'll calculate your results")) success++;
-        else fail++;
-      });
+      const promise = this.visitUrl(
+        "clan_viplounge.php",
+        {},
+        false,
+        `q1=beer&q2=robin&q3=thin&preaction=dotestlove&testlove=${userId}`
+      );
 
       promises.push(promise);
     }
 
     // We do promises so we're not accidentally messing up something else
     await Promise.allSettled(promises);
-
-    if (promises.length > 0) {
-      this.sendBotMessage(`Handled fortune teller, ${success} successes, ${fail} failures..`);
-    }
-
-    console.log("Finishing fortune teller");
   }
 
   async processMessage(): Promise<void> {

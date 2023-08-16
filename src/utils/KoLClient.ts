@@ -1,4 +1,4 @@
-import axios, { Method } from "axios";
+import axios from "axios";
 import { Agent as httpsAgent } from "https";
 import { Agent as httpAgent } from "http";
 import {
@@ -401,8 +401,7 @@ export class KoLClient implements ChatChannel {
     url: string,
     parameters: Record<string, any> = {},
     pwd: Boolean = true,
-    data: any = null,
-    method: Method = "POST"
+    data?: any
   ): Promise<any> {
     if (this._isRollover || (await this.getSecondsToRollover()) <= 1) {
       return null;
@@ -410,7 +409,7 @@ export class KoLClient implements ChatChannel {
 
     try {
       const page = await axios(`https://www.kingdomofloathing.com/${url}`, {
-        method: method,
+        method: "POST",
         withCredentials: true,
         headers: {
           cookie: this._credentials?.sessionCookies || "",
@@ -596,21 +595,36 @@ export class KoLClient implements ChatChannel {
 
     const promises = [];
     console.log("Now checking consults..");
+    let success = 0;
+    let fail = 0;
 
     for (const match of page.matchAll(/clan_viplounge\.php\?preaction=testlove&testlove=(\d+)/g)) {
       const userId = match[1];
 
       console.log("Found a consult for user ID: " + userId);
 
-      const promise = this.visitUrl(
-        `clan_viplounge.php?q1=beer&q2=robin&q3=thin&preaction=dotestlove&testlove=` + userId
-      );
+      const promise = this.visitUrl("clan_viplounge.php", {
+        q1: "beer",
+        q2: "robin",
+        q3: "thin",
+        preaction: "dotestlove",
+        testlove: userId,
+        option: "1",
+      }).then((s) => {
+        if ((s as string).includes("We'll calculate your results")) success++;
+        else fail++;
+      });
 
       promises.push(promise);
     }
 
     // We do promises so we're not accidentally messing up something else
     await Promise.allSettled(promises);
+
+    if (promises.length > 0) {
+      this.sendBotMessage(`Handled fortune teller, ${success} successes, ${fail} failures..`);
+    }
+
     console.log("Finishing fortune teller");
   }
 

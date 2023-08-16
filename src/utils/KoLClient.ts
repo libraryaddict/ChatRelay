@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { Method } from "axios";
 import { Agent as httpsAgent } from "https";
 import { Agent as httpAgent } from "http";
 import {
@@ -401,7 +401,8 @@ export class KoLClient implements ChatChannel {
     url: string,
     parameters: Record<string, any> = {},
     pwd: Boolean = true,
-    data?: any
+    data: any = null,
+    method: Method = "POST"
   ): Promise<any> {
     if (this._isRollover || (await this.getSecondsToRollover()) <= 1) {
       return null;
@@ -409,7 +410,7 @@ export class KoLClient implements ChatChannel {
 
     try {
       const page = await axios(`https://www.kingdomofloathing.com/${url}`, {
-        method: "POST",
+        method: method,
         withCredentials: true,
         headers: {
           cookie: this._credentials?.sessionCookies || "",
@@ -603,14 +604,20 @@ export class KoLClient implements ChatChannel {
 
       console.log("Found a consult for user ID: " + userId);
 
-      const promise = this.visitUrl("clan_viplounge.php", {
-        q1: "beer",
-        q2: "robin",
-        q3: "thin",
-        preaction: "dotestlove",
-        testlove: userId,
-        option: "1",
-      }).then((s) => {
+      const promise = this.visitUrl(
+        "clan_viplounge.php",
+        {
+          q1: "beer",
+          q2: "robin",
+          q3: "thin",
+          preaction: "dotestlove",
+          testlove: userId,
+          option: "1",
+        },
+        false,
+        null,
+        "GET"
+      ).then((s) => {
         if ((s as string).includes("We'll calculate your results")) success++;
         else fail++;
       });

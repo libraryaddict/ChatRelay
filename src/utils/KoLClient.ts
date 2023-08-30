@@ -22,6 +22,7 @@ import {
 import { ChatManager } from "../ChatManager";
 import { decode } from "html-entities";
 import { Mutex } from "async-mutex";
+import { send } from "process";
 
 axios.defaults.timeout = 30000;
 axios.defaults.httpAgent = new httpAgent({ keepAlive: true });
@@ -692,6 +693,10 @@ export class KoLClient implements ChatChannel {
         }
 
         msg = decode(msg);
+
+        if (messageType == "emote"&&msg.startsWith(sender)) {
+            msg = msg.replace(sender,"").trim();
+        }
 
         for (let link of links) {
           let newMsg = "";

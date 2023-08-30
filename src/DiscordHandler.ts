@@ -51,7 +51,7 @@ export class DiscordHandler implements ChatChannel {
       }
 
       let rawMessage = message.message;
-      rawMessage = rawMessage.replaceAll(/([*_~])/g, "\\$1");
+      rawMessage = rawMessage.replaceAll(/(?<!(?: |^)http[^ ]*)([*_~])/gi, "\\$1");
 
       const sender = message.sender;
 

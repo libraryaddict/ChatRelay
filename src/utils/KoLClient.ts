@@ -9,7 +9,7 @@ import {
   ChannelId,
   ChatMessage,
   KolAccountType,
-  KolEffect,
+  KolEffect
 } from "./Typings";
 import {
   encodeToKolEncoding,
@@ -17,12 +17,11 @@ import {
   getPublicMessageType,
   humanReadableTime,
   splitMessage,
-  stripHtml,
+  stripHtml
 } from "./Utils";
 import { ChatManager } from "../ChatManager";
 import { decode } from "html-entities";
 import { Mutex } from "async-mutex";
-import { send } from "process";
 
 axios.defaults.timeout = 30000;
 axios.defaults.httpAgent = new httpAgent({ keepAlive: true });
@@ -36,7 +35,12 @@ export class KoLClient implements ChatChannel {
   private _player?: KoLUser;
   private _isRollover: boolean = false;
   private _rolloverAt?: number;
-  private static privateChannels: string[] = ["clan", "hobopolis", "dread", "slimetube"];
+  private static privateChannels: string[] = [
+    "clan",
+    "hobopolis",
+    "dread",
+    "slimetube"
+  ];
   private messages: KOLMessage[] = [];
   private chatManager: ChatManager;
   private accountType: KolAccountType;
@@ -71,7 +75,9 @@ export class KoLClient implements ChatChannel {
   }
 
   async doStatusCheck() {
-    if (this.lastStatusCheck > Date.now() || this._isRollover) return;
+    if (this.lastStatusCheck > Date.now() || this._isRollover) {
+      return;
+    }
 
     // Every hour
     this.lastStatusCheck = Date.now() + 1000 * 60 * 60;
@@ -84,9 +90,17 @@ export class KoLClient implements ChatChannel {
     return this.channels.includes(channelId);
   }
 
-  async sendMessageToChannel(target: ChannelId, message: ChatMessage): Promise<void> {
+  async sendMessageToChannel(
+    target: ChannelId,
+    message: ChatMessage
+  ): Promise<void> {
     if (!KoLClient.privateChannels.includes(target.holderId)) {
-      console.log("Tried to send a message to '" + target.holderId + "', but that's not private?");
+      console.log(
+        "Tried to send a message to '" +
+          target.holderId +
+          "', but that's not private?"
+      );
+
       return;
     }
 
@@ -118,15 +132,19 @@ export class KoLClient implements ChatChannel {
     const response = (
       await this.visitUrl("submitnewchat.php", {
         graf: `/clan /whois ${this.getUsername()}`,
-        j: 1,
+        j: 1
       })
     )["output"] as string;
 
     //console.log("`" + response + "`");
 
-    const match = response.match(/ channel <b>([a-z]+)<\/b>(?: and listening to <b>(.*?)<\/b>)/);
+    const match = response.match(
+      / channel <b>([a-z]+)<\/b>(?: and listening to <b>(.*?)<\/b>)/
+    );
 
-    if (match == null) return [];
+    if (match == null) {
+      return [];
+    }
 
     const channels: string[] = [];
 
@@ -145,7 +163,7 @@ export class KoLClient implements ChatChannel {
     const response = (
       await this.visitUrl("submitnewchat.php", {
         graf: `/clan /channels`,
-        j: 1,
+        j: 1
       })
     )["output"] as string;
 
@@ -180,18 +198,21 @@ export class KoLClient implements ChatChannel {
   }
 
   async getEffects(): Promise<KolEffect[]> {
-    const apiResponse = await axios("https://www.kingdomofloathing.com/api.php", {
-      maxRedirects: 0,
-      withCredentials: true,
-      headers: {
-        cookie: this._credentials?.sessionCookies || "",
-      },
-      params: {
-        what: "status",
-        for: "DiscordChat (Maintained by Irrat)",
-      },
-      validateStatus: (status) => status === 302 || status === 200,
-    });
+    const apiResponse = await axios(
+      "https://www.kingdomofloathing.com/api.php",
+      {
+        maxRedirects: 0,
+        withCredentials: true,
+        headers: {
+          cookie: this._credentials?.sessionCookies || ""
+        },
+        params: {
+          what: "status",
+          for: "DiscordChat (Maintained by Irrat)"
+        },
+        validateStatus: (status) => status === 302 || status === 200
+      }
+    );
 
     if (!apiResponse.data["effects"]) {
       return [];
@@ -203,7 +224,7 @@ export class KoLClient implements ChatChannel {
       effects.push({
         name: k[0],
         turns: parseInt(k[1]),
-        effectId: k[4],
+        effectId: k[4]
       });
     }
 
@@ -215,6 +236,7 @@ export class KoLClient implements ChatChannel {
 
     if (channel == null) {
       console.log(message);
+
       return;
     }
 
@@ -223,7 +245,7 @@ export class KoLClient implements ChatChannel {
       formatting: "bot",
       sender: this.getUsername() ?? "Me the bot",
       message: message,
-      encoding: "ascii",
+      encoding: "ascii"
     });
   }
 
@@ -255,7 +277,7 @@ export class KoLClient implements ChatChannel {
     for (const effect of effects) {
       await this.visitUrl("uneffect.php", {
         using: "Yep.",
-        whicheffect: parseInt(effect.effectId),
+        whicheffect: parseInt(effect.effectId)
       });
     }
 
@@ -276,7 +298,7 @@ export class KoLClient implements ChatChannel {
   async getInventory(): Promise<Map<number, number>> {
     const apiResponse = await this.visitUrl("api.php", {
       what: "inventory",
-      for: "DiscordChat (Irrat)",
+      for: "DiscordChat (Irrat)"
     });
 
     const map: Map<number, number> = new Map();
@@ -285,10 +307,14 @@ export class KoLClient implements ChatChannel {
       return map;
     }
 
-    for (let key of Object.keys(apiResponse)) {
+    for (const key of Object.keys(apiResponse)) {
       const value = apiResponse[key];
 
-      if (typeof value != "string" || !/^\d+$/.test(key) || !/^\d+$/.test(value)) {
+      if (
+        typeof value != "string" ||
+        !/^\d+$/.test(key) ||
+        !/^\d+$/.test(value)
+      ) {
         continue;
       }
 
@@ -299,30 +325,37 @@ export class KoLClient implements ChatChannel {
   }
 
   async loggedIn(): Promise<boolean> {
-    if (!this._credentials || this._isRollover) return false;
+    if (!this._credentials || this._isRollover) {
+      return false;
+    }
 
     try {
-      const apiResponse = await axios("https://www.kingdomofloathing.com/api.php", {
-        maxRedirects: 0,
-        withCredentials: true,
-        headers: {
-          cookie: this._credentials?.sessionCookies || "",
-        },
-        params: {
-          what: "status",
-          for: "DiscordChat (Maintained by Irrat)",
-        },
-        validateStatus: (status) => status === 302 || status === 200,
-      });
+      const apiResponse = await axios(
+        "https://www.kingdomofloathing.com/api.php",
+        {
+          maxRedirects: 0,
+          withCredentials: true,
+          headers: {
+            cookie: this._credentials?.sessionCookies || ""
+          },
+          params: {
+            what: "status",
+            for: "DiscordChat (Maintained by Irrat)"
+          },
+          validateStatus: (status) => status === 302 || status === 200
+        }
+      );
 
       if (apiResponse.status === 200) {
         this._rolloverAt = parseInt(apiResponse.data["rollover"]);
+
         return true;
       }
 
       return false;
     } catch (e) {
       console.log("Login check failed, returning false to be safe.", e);
+
       return false;
     }
   }
@@ -331,71 +364,93 @@ export class KoLClient implements ChatChannel {
     await this.mutex.acquire();
 
     try {
-      if (await this.loggedIn()) return true;
+      if (await this.loggedIn()) {
+        return true;
+      }
 
       this._credentials = undefined;
 
       try {
-        this._isRollover = /The system is currently down for nightly maintenance/.test(
-          (await axios("https://www.kingdomofloathing.com/")).data
-        );
+        this._isRollover =
+          /The system is currently down for nightly maintenance/.test(
+            (await axios("https://www.kingdomofloathing.com/")).data
+          );
 
         if (this._isRollover) {
-          console.log("Rollover appears to be in progress. Checking again in one minute.");
+          console.log(
+            "Rollover appears to be in progress. Checking again in one minute."
+          );
         }
       } catch (e) {
         this._isRollover = true;
-        console.log("Login failed.. Rollover? Checking again in one minute.", e);
+        console.log(
+          "Login failed.. Rollover? Checking again in one minute.",
+          e
+        );
       }
 
       if (this._isRollover) {
         setTimeout(() => this.logIn(), 60000);
+
         return false;
       }
 
-      console.log(`Not logged in. Logging in as ${this._loginParameters.get("loginname")}`);
+      console.log(
+        `Not logged in. Logging in as ${this._loginParameters.get("loginname")}`
+      );
 
       try {
-        const loginResponse = await axios("https://www.kingdomofloathing.com/login.php", {
-          method: "POST",
-          data: this._loginParameters,
-          maxRedirects: 0,
-          validateStatus: (status) => status === 302,
-        });
+        const loginResponse = await axios(
+          "https://www.kingdomofloathing.com/login.php",
+          {
+            method: "POST",
+            data: this._loginParameters,
+            maxRedirects: 0,
+            validateStatus: (status) => status === 302
+          }
+        );
 
         if (!loginResponse.headers["set-cookie"]) {
           console.log("Login failed.. Headers missing");
+
           return false;
         }
 
         const sessionCookies = loginResponse.headers["set-cookie"]
           .map((cookie: string) => cookie.split(";")[0])
           .join("; ");
-        const apiResponse = await axios("https://www.kingdomofloathing.com/api.php", {
-          withCredentials: true,
-          headers: {
-            cookie: sessionCookies,
-          },
-          params: {
-            what: "status",
-            for: "DiscordChat (Maintained by Irrat)",
-          },
-        });
+        const apiResponse = await axios(
+          "https://www.kingdomofloathing.com/api.php",
+          {
+            withCredentials: true,
+            headers: {
+              cookie: sessionCookies
+            },
+            params: {
+              what: "status",
+              for: "DiscordChat (Maintained by Irrat)"
+            }
+          }
+        );
         this._credentials = {
           sessionCookies: sessionCookies,
-          pwdhash: apiResponse.data.pwd,
+          pwdhash: apiResponse.data.pwd
         };
         this._player = {
           id: apiResponse.data.playerid,
-          name: apiResponse.data.name,
+          name: apiResponse.data.name
         };
         console.log("Login success.");
 
         return true;
       } catch (e) {
-        console.log("Login failed.. Got an error. Trying again in a minute.", e);
+        console.log(
+          "Login failed.. Got an error. Trying again in a minute.",
+          e
+        );
         this._isRollover = true;
         setTimeout(() => this.logIn(), 60000);
+
         return false;
       }
     } finally {
@@ -406,7 +461,7 @@ export class KoLClient implements ChatChannel {
   async visitUrl(
     url: string,
     parameters: Record<string, any> = {},
-    pwd: Boolean = true,
+    pwd: boolean = true,
     data: any = null,
     method: Method = "POST"
   ): Promise<any> {
@@ -419,19 +474,19 @@ export class KoLClient implements ChatChannel {
         method: method,
         withCredentials: true,
         headers: {
-          cookie: this._credentials?.sessionCookies || "",
+          cookie: this._credentials?.sessionCookies || ""
         },
         params: {
           ...(pwd ? { pwd: this._credentials?.pwdhash } : {}),
-          ...parameters,
+          ...parameters
         },
-        data: data,
+        data: data
       });
 
       if (page.headers["set-cookie"] && this._credentials != null) {
         const cookies: any = {};
 
-        for (let [name, cookie] of this._credentials.sessionCookies
+        for (const [name, cookie] of this._credentials.sessionCookies
           .split("; ")
           .map((s) => s.split("="))) {
           if (!cookie) {
@@ -441,11 +496,11 @@ export class KoLClient implements ChatChannel {
           cookies[name] = cookie;
         }
 
-        const sessionCookies = page.headers["set-cookie"].map((cookie: string) =>
-          cookie.split(";")[0].trim().split("=")
+        const sessionCookies = page.headers["set-cookie"].map(
+          (cookie: string) => cookie.split(";")[0].trim().split("=")
         );
 
-        for (let [name, cookie] of sessionCookies) {
+        for (const [name, cookie] of sessionCookies) {
           cookies[name] = cookie;
         }
 
@@ -463,7 +518,7 @@ export class KoLClient implements ChatChannel {
   async useChatMacro(macro: string): Promise<void> {
     await this.visitUrl("submitnewchat.php", {
       graf: `/clan ${macro}`,
-      j: 1,
+      j: 1
     });
   }
 
@@ -479,9 +534,12 @@ export class KoLClient implements ChatChannel {
     // Too lazy to figure out the regex, so replace any remaining newlines with a space
     macro = macro.replaceAll("\n", " ");
 
-    for (let msg of splitMessage(macro)) {
+    for (const msg of splitMessage(macro)) {
       if (channel != "clan") {
-        console.log(this.getUsername() + " attempted to send to " + channel + ": " + msg);
+        console.log(
+          this.getUsername() + " attempted to send to " + channel + ": " + msg
+        );
+
         return;
       }
 
@@ -494,13 +552,18 @@ export class KoLClient implements ChatChannel {
       // We run the encoding as part of the url cos kol seems to handroll their own encoding?
       // And because axios will encode the message in a real encoding if we don't prevent that
       await this.mutex.runExclusive(async () => {
-        await this.visitUrl("submitnewchat.php?graf=" + encodeToKolEncoding(msg), {
-          j: 1,
-        });
+        await this.visitUrl(
+          "submitnewchat.php?graf=" + encodeToKolEncoding(msg),
+          {
+            j: 1
+          }
+        );
       });
     } catch (e) {
       console.log(
-        "Errored when trying to send message " + JSON.stringify(msg) + ", will retry in 5min",
+        "Errored when trying to send message " +
+          JSON.stringify(msg) +
+          ", will retry in 5min",
         e
       );
 
@@ -518,12 +581,17 @@ export class KoLClient implements ChatChannel {
         return [];
       }
 
-      const newChatMessagesResponse = await this.visitUrl("newchatmessages.php", {
-        j: 1,
-        lasttime: this._lastFetchedMessages,
-      });
+      const newChatMessagesResponse = await this.visitUrl(
+        "newchatmessages.php",
+        {
+          j: 1,
+          lasttime: this._lastFetchedMessages
+        }
+      );
 
-      if (!newChatMessagesResponse) return [];
+      if (!newChatMessagesResponse) {
+        return [];
+      }
 
       this._lastFetchedMessages = newChatMessagesResponse["last"];
 
@@ -531,7 +599,10 @@ export class KoLClient implements ChatChannel {
 
       return newWhispers;
     } catch (e) {
-      console.log("Errored when trying to pull messages for " + this.getUsername(), e);
+      console.log(
+        "Errored when trying to pull messages for " + this.getUsername(),
+        e
+      );
     }
 
     return [];
@@ -558,7 +629,9 @@ export class KoLClient implements ChatChannel {
       }
 
       for (const channel of KoLClient.privateChannels) {
-        if (!hasChannels.includes(channel) || listeningTo.includes(channel)) continue;
+        if (!hasChannels.includes(channel) || listeningTo.includes(channel)) {
+          continue;
+        }
 
         console.log("Listening to `" + channel + "`");
         await this.useChatMacro("/listen " + channel);
@@ -568,7 +641,9 @@ export class KoLClient implements ChatChannel {
       const listeningTo = await this.getChannelsListening();
 
       for (const channel of hasChannels) {
-        if (listeningTo.includes(channel)) continue;
+        if (listeningTo.includes(channel)) {
+          continue;
+        }
 
         console.log("Listening to `" + channel + "`");
         await this.useChatMacro("/listen " + channel);
@@ -581,11 +656,17 @@ export class KoLClient implements ChatChannel {
       return;
     }
 
-    let page: string = await this.visitUrl("clan_viplounge.php", { preaction: "lovetester" });
+    let page: string = await this.visitUrl("clan_viplounge.php", {
+      preaction: "lovetester"
+    });
 
     // Only set to true if we're explicitly denied entry
-    if (this.fortuneTeller == null && page.includes("You attempt to sneak into the VIP Lounge")) {
+    if (
+      this.fortuneTeller == null &&
+      page.includes("You attempt to sneak into the VIP Lounge")
+    ) {
       this.fortuneTeller = "DOESNT EXIST";
+
       return;
     }
 
@@ -598,7 +679,9 @@ export class KoLClient implements ChatChannel {
 
     const promises = [];
 
-    for (const match of page.matchAll(/clan_viplounge\.php\?preaction=testlove&testlove=(\d+)/g)) {
+    for (const match of page.matchAll(
+      /clan_viplounge\.php\?preaction=testlove&testlove=(\d+)/g
+    )) {
       const userId = match[1];
 
       const promise = this.visitUrl(
@@ -620,16 +703,21 @@ export class KoLClient implements ChatChannel {
 
     if (!message) {
       // Only run a status check when we're not processing anything
-      if (!this.messageProcessingMutex.isLocked() && !this.mutex.isLocked()) this.doStatusCheck();
+      if (!this.messageProcessingMutex.isLocked() && !this.mutex.isLocked()) {
+        this.doStatusCheck();
+      }
 
       setTimeout(() => this.processMessage(), 1000);
+
       return;
     }
 
     try {
       this.messageProcessingMutex.runExclusive(async () => {
         // pvp radio
-        if (message != null && message.who != null && message.who.id == "-69") return;
+        if (message != null && message.who != null && message.who.id == "-69") {
+          return;
+        }
 
         // console.log("Received kol message: " + JSON.stringify(message));
         //  {"msg":"<b>gizmofinch</b> just thwarted wardeath11!","type":"public","mid":"1533599175","who":{"name":"HMC Radio","id":"-69","color":null},"format":"0","channel":null,"channelcolor":null,"time":"1688375906"}
@@ -648,7 +736,10 @@ export class KoLClient implements ChatChannel {
 
         // {"msgs":[{"type":"event","msg":"You have been invited to <a style='color: green' target='mainpane' href='clan_viplounge.php?preaction=testlove&testlove=3257284'>consult Madame Zatara about your relationship<\/a> with Rosemary Gulasch.","link":false,"time":"1692188076"}],"last":"1535503834","delay":3000}
 
-        if (message.type == "event" && message.msg?.includes("<!--refresh-->")) {
+        if (
+          message.type == "event" &&
+          message.msg?.includes("<!--refresh-->")
+        ) {
           this.sendBotMessage(stripHtml(message.msg));
           await this.removeBadEffects();
         }
@@ -660,13 +751,27 @@ export class KoLClient implements ChatChannel {
           await this.checkFortuneTeller();
         }
 
-        if (message.who == null || message.channel == null || message.msg == null) return;
+        if (
+          message.who == null ||
+          message.channel == null ||
+          message.msg == null
+        ) {
+          return;
+        }
 
-        if (message.who.name.toLowerCase() == this._player?.name.toLowerCase()) return;
+        if (
+          message.who.name.toLowerCase() == this._player?.name.toLowerCase()
+        ) {
+          return;
+        }
 
-        const channel = this.channels.find((c) => c.holderId == message.channel);
+        const channel = this.channels.find(
+          (c) => c.holderId == message.channel
+        );
 
-        if (channel == null) return;
+        if (channel == null) {
+          return;
+        }
 
         const sender = stripHtml(message.who.name);
 
@@ -685,7 +790,7 @@ export class KoLClient implements ChatChannel {
 
         msg = msg.replaceAll(/<[Bb][Rr]>/g, "\n");
 
-        let tempMsg = msg;
+        const tempMsg = msg;
         msg = stripHtml(msg);
 
         if (msg.trim().length == 0) {
@@ -694,11 +799,11 @@ export class KoLClient implements ChatChannel {
 
         msg = decode(msg);
 
-        if (messageType == "emote"&&msg.startsWith(sender)) {
-            msg = msg.replace(sender,"").trim();
+        if (messageType == "emote" && msg.startsWith(sender)) {
+          msg = msg.replace(sender, "").trim();
         }
 
-        for (let link of links) {
+        for (const link of links) {
           let newMsg = "";
           let state = 0;
           let startAt = 0;
@@ -719,7 +824,12 @@ export class KoLClient implements ChatChannel {
               startAt = i;
               newMsg = msg.substring(0, i) + link;
             } else if (state == 1) {
-              if (msg.substring(startAt, i).replaceAll(" ", "") != "[link]" + link) continue;
+              if (
+                msg.substring(startAt, i).replaceAll(" ", "") !=
+                "[link]" + link
+              ) {
+                continue;
+              }
 
               newMsg += msg.substring(i);
               state = 2;
@@ -732,12 +842,14 @@ export class KoLClient implements ChatChannel {
           }
         }
 
+        msg = msg.replaceAll(/ {2,}/g, " ");
+
         this.chatManager.onChat({
           from: channel,
           sender: sender,
           message: msg,
           formatting: messageType,
-          encoding: "ascii",
+          encoding: "ascii"
         });
       });
     } catch (e) {
@@ -754,7 +866,9 @@ export class KoLClient implements ChatChannel {
       this.doInitialChannelJoining().then(async () => {
         const secondsToRollover = await this.getSecondsToRollover();
 
-        console.log(`The next rollover is in ${humanReadableTime(secondsToRollover)}`);
+        console.log(
+          `The next rollover is in ${humanReadableTime(secondsToRollover)}`
+        );
 
         console.log("Initial setup complete. Polling messages.");
 

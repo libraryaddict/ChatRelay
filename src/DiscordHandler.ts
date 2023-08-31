@@ -1,12 +1,4 @@
-import {
-  Client,
-  MessageFlags,
-  MessageFlagsBitField,
-  MessageType,
-  TextBasedChannel,
-  TextChannel,
-  WebhookClient,
-} from "discord.js";
+import { Client, TextBasedChannel, WebhookClient } from "discord.js";
 import { Command } from "./discord/DiscordCommand";
 import { ChannelId, ChatChannel, ChatMessage } from "./utils/Typings";
 import { ChatManager } from "./ChatManager";
@@ -32,7 +24,10 @@ export class DiscordHandler implements ChatChannel {
   async sendMessageToChannel(target: ChannelId, message: ChatMessage) {
     await this.mutex.runExclusive(async () => {
       if (this.client == null || !this.client.isReady()) {
-        console.log("Unable to send message to discord, discord ain't available");
+        console.log(
+          "Unable to send message to discord, discord ain't available"
+        );
+
         return;
       }
 
@@ -40,6 +35,7 @@ export class DiscordHandler implements ChatChannel {
 
       if (guild == null) {
         console.log("Can't find guild");
+
         return;
       }
 
@@ -47,11 +43,15 @@ export class DiscordHandler implements ChatChannel {
 
       if (channel == null) {
         console.log("Can't find channel");
+
         return;
       }
 
       let rawMessage = message.message;
-      rawMessage = rawMessage.replaceAll(/(?<!(?: |^)http[^ ]*)([*_~])/gi, "\\$1");
+      rawMessage = rawMessage.replaceAll(
+        /(?<!(?: |^)http[^ ]*)([*_~])/gi,
+        "\\$1"
+      );
 
       const sender = message.sender;
 
@@ -78,16 +78,16 @@ export class DiscordHandler implements ChatChannel {
           content: msg,
           options: {
             flags: ["SuppressEmbeds", "SuppressNotifications"],
-            allowedMentions: {},
-          },
+            allowedMentions: {}
+          }
         });
       } else {
         await (channel as TextBasedChannel).send({
           content: msg,
           options: {
             flags: ["SuppressEmbeds", "SuppressNotifications"],
-            allowedMentions: {},
-          },
+            allowedMentions: {}
+          }
         });
       }
     });
@@ -104,8 +104,8 @@ export class DiscordHandler implements ChatChannel {
         "GuildMembers",
         "GuildModeration",
         "MessageContent",
-        "GuildWebhooks",
-      ],
+        "GuildWebhooks"
+      ]
     });
 
     this.client.login(this.token);
@@ -118,15 +118,24 @@ export class DiscordHandler implements ChatChannel {
 
     this.client.on("messageCreate", (message) => {
       // If not in guild, or is a bot
-      if (message.member == null || !message.inGuild() || message.author.bot) return;
+      if (message.member == null || !message.inGuild() || message.author.bot) {
+        return;
+      }
 
       let msg = message.cleanContent;
 
-      if (msg.length <= 0) return;
+      if (msg.length <= 0) {
+        return;
+      }
 
-      const channelId = this.chatManager.getChannelId(message.guildId, message.channelId);
+      const channelId = this.chatManager.getChannelId(
+        message.guildId,
+        message.channelId
+      );
 
-      if (channelId == null) return;
+      if (channelId == null) {
+        return;
+      }
 
       const format = msg.match(/^[_*].*[_*]$/) ? "emote" : "normal";
 
@@ -134,19 +143,23 @@ export class DiscordHandler implements ChatChannel {
         msg = msg.substring(1, msg.length - 1);
       }
 
-      if (msg.length <= 0) return;
+      if (msg.length <= 0) {
+        return;
+      }
 
-      for (let [p1, p2] of [
+      for (const [p1, p2] of [
         ["“", '"'],
         ["”", '"'],
         ["‘", "'"],
-        ["’", "'"],
+        ["’", "'"]
       ]) {
         msg = msg.replaceAll(p1, p2);
       }
 
       // Convert emojis to their text equiv
       msg = unemojify(msg);
+      // Convert discord's custom emoji to a simple :emoji:
+      msg = msg.replaceAll(/<(:[a-zA-Z_]+:)\d+>/g, "$1");
       // Convert all double spaces to single spaces
       msg = msg.replaceAll(/ {2,}/g, " ");
 
@@ -155,7 +168,7 @@ export class DiscordHandler implements ChatChannel {
         sender: message.member.nickname ?? message.member.displayName,
         message: msg,
         formatting: format,
-        encoding: "utf-8",
+        encoding: "utf-8"
       });
     });
   }

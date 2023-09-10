@@ -1,23 +1,26 @@
 import { decode, encode } from "html-entities";
-import { KOLMessage, KolEffect, PublicMessageType } from "./Typings";
+import { KOLMessage, PublicMessageType } from "./Typings";
 
 /**
  * Start KoL's special encoding
  */
-let SAFECHARS =
+const SAFECHARS =
   "0123456789" + // Numeric
   "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + // Alphabetic
   "abcdefghijklmnopqrstuvwxyz" +
   "-_.!~*'()"; // RFC2396 Mark characters
-let HEX = "0123456789ABCDEF";
+const HEX = "0123456789ABCDEF";
+
 export function encodeToKolEncoding(x: string): string {
   // The Javascript escape and unescape functions do not correspond
   // with what browsers actually do...
 
-  let plaintext = x;
+  const plaintext = x;
   let encoded = "";
-  for (var i = 0; i < plaintext.length; i++) {
-    let ch = plaintext.charAt(i);
+
+  for (let i = 0; i < plaintext.length; i++) {
+    const ch = plaintext.charAt(i);
+
     if (ch == "+") {
       encoded += "%2B";
     } else if (ch == " ") {
@@ -25,7 +28,8 @@ export function encodeToKolEncoding(x: string): string {
     } else if (SAFECHARS.indexOf(ch) != -1) {
       encoded += ch;
     } else {
-      let charCode = ch.charCodeAt(0);
+      const charCode = ch.charCodeAt(0);
+
       if (charCode > 255) {
         /*  console.log(
           "Unicode Character '" +
@@ -47,6 +51,73 @@ export function encodeToKolEncoding(x: string): string {
   return encoded;
 }
 
+export function cleanupKolMessage(
+  sender: string,
+  msg: string,
+  messageType: PublicMessageType | undefined
+): string {
+  const links: string[] = [];
+
+  for (const match of msg.matchAll(/href="([^"]*)"/g)) {
+    links.push(decode(match[1]));
+  }
+
+  msg = msg.replaceAll(/<[Bb][Rr]>/g, "\n");
+
+  const tempMsg = msg;
+  msg = stripHtml(msg);
+
+  if (msg.trim().length == 0) {
+    msg = "RAW: " + tempMsg;
+  }
+
+  msg = decode(msg);
+
+  if (messageType == "emote" && msg.startsWith(sender)) {
+    msg = msg.replace(sender, "").trim();
+  }
+
+  for (const link of links) {
+    let newMsg = "";
+    let state = 0;
+    let startAt = 0;
+
+    for (let i = 0; i <= msg.length; i++) {
+      if (state == 0 && i < msg.length) {
+        if (
+          msg.charAt(i) == " " ||
+          !msg
+            .substring(i)
+            .replaceAll(" ", "")
+            .startsWith("[link]" + link)
+        ) {
+          continue;
+        }
+
+        state = 1;
+        startAt = i;
+        newMsg = msg.substring(0, i) + link;
+      } else if (state == 1) {
+        if (msg.substring(startAt, i).replaceAll(" ", "") != "[link]" + link) {
+          continue;
+        }
+
+        newMsg += msg.substring(i);
+        state = 2;
+        break;
+      }
+    }
+
+    if (state == 2) {
+      msg = newMsg;
+    }
+  }
+
+  msg = msg.replaceAll(/ {2,}/g, " ");
+
+  return msg;
+}
+
 export function getBadKolEffects(): string[] {
   return [
     "wanged",
@@ -54,7 +125,7 @@ export function getBadKolEffects(): string[] {
     "Bruised Jaw",
     "So Much Holiday Fun!",
     "On Safari",
-    "Harpooned and Marooned",
+    "Harpooned and Marooned"
   ].map((s) => s.toLowerCase());
 }
 
@@ -71,12 +142,14 @@ export function stripHtml(message: string): string {
   let match;
   let startFrom = 0;
 
-  let openingTags: [number, string, string, string?][] = [];
-  let closingTags: [number, string][] = [];
+  const openingTags: [number, string, string, string?][] = [];
+  const closingTags: [number, string][] = [];
 
   while (
     (match = message.match(
-      `^(.{` + startFrom + `}.*?)(<([^/> ]+)[^>]*?(?: title="([^">]*)")?[^>]*?>)`
+      `^(.{` +
+        startFrom +
+        `}.*?)(<([^/> ]+)[^>]*?(?: title="([^">]*)")?[^>]*?>)`
     )) != null
   ) {
     // Index, Full tag, tag name, title
@@ -93,10 +166,14 @@ export function stripHtml(message: string): string {
   }
 
   while (openingTags.length > 0) {
-    let [index, fullTag, name, title] = openingTags[0];
+    const [index, fullTag, name, title] = openingTags[0];
 
-    let validClosing = closingTags.filter(([cInd, cName]) => cInd > index && cName == name);
-    let confOpening = openingTags.filter(([ind, ful, nam]) => ind >= index && nam == name);
+    const validClosing = closingTags.filter(
+      ([cInd, cName]) => cInd > index && cName == name
+    );
+    const confOpening = openingTags.filter(
+      ([ind, ful, nam]) => ind >= index && nam == name
+    );
 
     openingTags.shift();
 
@@ -110,11 +187,14 @@ export function stripHtml(message: string): string {
         }
       }
 
-      const between = title ?? message.substring(index + fullTag.length, +validClosing[ind][0]);
+      const between =
+        title ??
+        message.substring(index + fullTag.length, +validClosing[ind][0]);
       const endFrom = validClosing[ind][0] + name.length + 3;
       const startFrom = index;
 
-      message = message.substring(0, startFrom) + between + message.substring(endFrom);
+      message =
+        message.substring(0, startFrom) + between + message.substring(endFrom);
 
       return stripHtml(message);
     }
@@ -123,9 +203,17 @@ export function stripHtml(message: string): string {
   while ((match = message.match(/<.*?>/)) != null) {
     let replaceWith = "";
 
-    if (match[0].includes('12x12skull.gif"')) replaceWith = ":skull:";
-    if (match[0].includes('12x12heart.png"')) replaceWith = ":heart:";
-    if (match[0].includes('12x12snowman.gif"')) replaceWith = ":snowman:";
+    if (match[0].includes('12x12skull.gif"')) {
+      replaceWith = ":skull:";
+    }
+
+    if (match[0].includes('12x12heart.png"')) {
+      replaceWith = ":heart:";
+    }
+
+    if (match[0].includes('12x12snowman.gif"')) {
+      replaceWith = ":snowman:";
+    }
 
     message = message.replace(match[0], replaceWith);
   }
@@ -141,7 +229,7 @@ export function stripHtml(message: string): string {
 export function splitMessage(message: string, limit: number = 245): string[] {
   // TODO Try to honor spaces
   let encodedRemainder = encode(message);
-  let messages: string[] = [];
+  const messages: string[] = [];
 
   if (encodedRemainder.length > limit) {
     let end = limit;
@@ -149,7 +237,9 @@ export function splitMessage(message: string, limit: number = 245): string[] {
 
     // Make sure we don't leave html entities out
     while (
-      !message.includes((toSnip = decode(encodedRemainder.substring(0, end)))) ||
+      !message.includes(
+        (toSnip = decode(encodedRemainder.substring(0, end)))
+      ) ||
       !message.includes(decode(encodedRemainder.substring(end)))
     ) {
       end--;
@@ -167,7 +257,8 @@ export function splitMessage(message: string, limit: number = 245): string[] {
 export function isModMessage(message: KOLMessage): boolean {
   return (
     message.who != null &&
-    (message.who.name === "Mod Announcement" || message.who?.name === "Mod Warning")
+    (message.who.name === "Mod Announcement" ||
+      message.who?.name === "Mod Warning")
   );
 }
 
@@ -187,8 +278,12 @@ export function isPublicMessage(message: KOLMessage): boolean {
   return message.type === "public";
 }
 
-export function getPublicMessageType(message: KOLMessage): PublicMessageType | undefined {
-  if (message.type != "public") return undefined;
+export function getPublicMessageType(
+  message: KOLMessage
+): PublicMessageType | undefined {
+  if (message.type != "public") {
+    return undefined;
+  }
 
   if (message.format == "0") {
     return "normal";

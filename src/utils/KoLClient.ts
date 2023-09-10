@@ -12,6 +12,7 @@ import {
   KolEffect
 } from "./Typings";
 import {
+  cleanupKolMessage,
   encodeToKolEncoding,
   getBadKolEffects,
   getPublicMessageType,
@@ -20,7 +21,6 @@ import {
   stripHtml
 } from "./Utils";
 import { ChatManager } from "../ChatManager";
-import { decode } from "html-entities";
 import { Mutex } from "async-mutex";
 
 axios.defaults.timeout = 30000;
@@ -41,6 +41,7 @@ export class KoLClient implements ChatChannel {
     "dread",
     "slimetube"
   ];
+
   private messages: KOLMessage[] = [];
   private chatManager: ChatManager;
   private accountType: KolAccountType;
@@ -780,69 +781,7 @@ export class KoLClient implements ChatChannel {
         }
 
         const messageType = getPublicMessageType(message);
-
-        const links: string[] = [];
-        let msg = message.msg;
-
-        for (const match of msg.matchAll(/href="([^"]*)"/g)) {
-          links.push(match[1]);
-        }
-
-        msg = msg.replaceAll(/<[Bb][Rr]>/g, "\n");
-
-        const tempMsg = msg;
-        msg = stripHtml(msg);
-
-        if (msg.trim().length == 0) {
-          msg = "RAW: " + tempMsg;
-        }
-
-        msg = decode(msg);
-
-        if (messageType == "emote" && msg.startsWith(sender)) {
-          msg = msg.replace(sender, "").trim();
-        }
-
-        for (const link of links) {
-          let newMsg = "";
-          let state = 0;
-          let startAt = 0;
-
-          for (let i = 0; i <= msg.length; i++) {
-            if (state == 0 && i < msg.length) {
-              if (
-                msg.charAt(i) == " " ||
-                !msg
-                  .substring(i)
-                  .replaceAll(" ", "")
-                  .startsWith("[link]" + link)
-              ) {
-                continue;
-              }
-
-              state = 1;
-              startAt = i;
-              newMsg = msg.substring(0, i) + link;
-            } else if (state == 1) {
-              if (
-                msg.substring(startAt, i).replaceAll(" ", "") !=
-                "[link]" + link
-              ) {
-                continue;
-              }
-
-              newMsg += msg.substring(i);
-              state = 2;
-              break;
-            }
-          }
-
-          if (state == 2) {
-            msg = newMsg;
-          }
-        }
-
-        msg = msg.replaceAll(/ {2,}/g, " ");
+        const msg = cleanupKolMessage(sender, message.msg, messageType);
 
         this.chatManager.onChat({
           from: channel,

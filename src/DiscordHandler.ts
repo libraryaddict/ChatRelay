@@ -54,19 +54,32 @@ export class DiscordHandler implements ChatChannel {
       );
 
       const sender = message.sender;
+      let senderName = sender;
 
-      let msg = `**[${sender}]** ${rawMessage}`;
+      if (!senderName.startsWith("[") && !senderName.endsWith("]")) {
+        senderName = `[${sender}]`;
+      }
+
+      let msg = `**[${senderName}]** ${rawMessage}`;
 
       if (message.formatting == "emote") {
-        rawMessage = rawMessage.replace(sender + " ", "");
-        msg = `**[${sender}]** ${rawMessage}`;
+        if (
+          rawMessage
+            .trim()
+            .toLowerCase()
+            .startsWith(sender.toLowerCase() + " ")
+        ) {
+          rawMessage = rawMessage.trim().substring(sender.length + 1);
+        }
+
+        msg = `**${senderName}** ${rawMessage}`;
         msg = `*${msg}*`;
       } else if (message.formatting == "mod announcement") {
-        msg = `__${msg}__`;
+        msg = `:warning: ${msg}`;
       } else if (message.formatting == "mod warning") {
-        msg = `__**${`[${sender}] ${rawMessage}`}**__`;
+        msg = `:no_entry_sign: ${msg}`;
       } else if (message.formatting == "system") {
-        msg = `**${msg}**`;
+        msg = `:loudspeaker: ${msg}`;
       }
 
       if (target.webhook != null) {

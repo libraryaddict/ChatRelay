@@ -110,7 +110,13 @@ export class KoLClient implements ChatChannel {
       return;
     }
 
-    let msg = `[${message.sender}] ${message.message}`;
+    let sender = message.sender;
+
+    if (!sender.startsWith("[") && !sender.endsWith("]")) {
+      sender = `[${sender}]`;
+    }
+
+    let msg = `${sender} ${message.message}`;
 
     if (message.formatting == "emote") {
       msg = "/me " + msg;
@@ -774,13 +780,21 @@ export class KoLClient implements ChatChannel {
           return;
         }
 
-        const sender = stripHtml(message.who.name);
+        let sender = stripHtml(message.who.name);
 
         if (this.chatManager.ignoredChatRelays.includes(sender.toLowerCase())) {
           return;
         }
 
         const messageType = getPublicMessageType(message);
+
+        if (
+          message.who.id &&
+          (messageType == "mod announcement" || messageType == "mod warning")
+        ) {
+          sender = `[${sender}] (#${message.who.id})`;
+        }
+
         const msg = cleanupKolMessage(sender, message.msg, messageType);
 
         this.chatManager.onChat({

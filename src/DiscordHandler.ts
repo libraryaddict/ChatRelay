@@ -60,7 +60,7 @@ export class DiscordHandler implements ChatChannel {
         senderName = `[${sender}]`;
       }
 
-      let msg = `**[${senderName}]** ${rawMessage}`;
+      let msg = `**${senderName}** ${rawMessage}`;
 
       if (message.formatting == "emote") {
         if (

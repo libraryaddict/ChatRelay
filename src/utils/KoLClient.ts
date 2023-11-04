@@ -542,7 +542,7 @@ export class KoLClient implements ChatChannel {
     macro = macro.replaceAll("\n", " ");
 
     for (const msg of splitMessage(macro)) {
-      if (channel != "clan") {
+      if (!KoLClient.privateChannels.includes(channel)) {
         console.log(
           this.getUsername() + " attempted to send to " + channel + ": " + msg
         );

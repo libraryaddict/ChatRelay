@@ -68,6 +68,7 @@ export interface ChatMessage {
   message: string;
   formatting: PublicMessageType | undefined;
   encoding: BufferEncoding;
+  previewLinks?: boolean;
 }
 
 export interface ChatChannel {

@@ -1,4 +1,4 @@
-import { Client, TextBasedChannel, WebhookClient } from "discord.js";
+import { APIEmbed, Client, TextBasedChannel, WebhookClient } from "discord.js";
 import { Command } from "./discord/DiscordCommand";
 import { ChannelId, ChatChannel, ChatMessage } from "./utils/Typings";
 import { ChatManager } from "./ChatManager";
@@ -11,6 +11,7 @@ export class DiscordHandler implements ChatChannel {
   chatManager: ChatManager;
   token: string;
   mutex: Mutex = new Mutex();
+  noEmbeds: string[] = [];
 
   constructor(chatManager: ChatManager, token: string) {
     this.token = token;
@@ -21,7 +22,19 @@ export class DiscordHandler implements ChatChannel {
     return channelId.side == "Discord";
   }
 
-  async sendMessageToChannel(target: ChannelId, message: ChatMessage) {
+  async sendMessageToChannel(
+    target: ChannelId,
+    message: ChatMessage,
+    withEmbeds: boolean = true
+  ) {
+    // A bit ugly eh
+    if (
+      (target.webhook != null && this.noEmbeds.includes(target.webhook)) ||
+      (target.channelId != null && this.noEmbeds.includes(target.channelId))
+    ) {
+      withEmbeds = false;
+    }
+
     await this.mutex.runExclusive(async () => {
       if (this.client == null || !this.client.isReady()) {
         console.log(
@@ -56,11 +69,24 @@ export class DiscordHandler implements ChatChannel {
       const sender = message.sender;
       let senderName = sender;
 
-      if (!senderName.startsWith("[") && !senderName.endsWith("]")) {
+      if (
+        !senderName.startsWith("[") &&
+        !senderName.endsWith("]") &&
+        message.formatting != "mod announcement" &&
+        message.formatting != "mod warning"
+      ) {
         senderName = `[${sender}]`;
       }
 
-      let msg = `**${senderName}** ${rawMessage}`;
+      const linkRegex =
+        /(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*))/g;
+
+      const messageToShow =
+        message.previewLinks == true
+          ? rawMessage
+          : rawMessage.replaceAll(linkRegex, "<$1>");
+      let msg = `**${senderName}** ${messageToShow}`;
+      const embeds: APIEmbed[] = [];
 
       if (message.formatting == "emote") {
         if (
@@ -75,33 +101,82 @@ export class DiscordHandler implements ChatChannel {
         msg = `**${senderName}** ${rawMessage}`;
         msg = `*${msg}*`;
       } else if (message.formatting == "mod announcement") {
-        msg = `:warning: ${msg}`;
+        if (withEmbeds) {
+          embeds.push({
+            title: "Mod Announcement by " + senderName,
+            color: 0x2ca816,
+            description: rawMessage
+          });
+          msg = ``;
+        } else {
+          msg = `:warning: ${msg}`;
+        }
       } else if (message.formatting == "mod warning") {
-        msg = `:no_entry_sign: ${msg}`;
+        if (withEmbeds) {
+          embeds.push({
+            title: "Mod Warning by " + senderName,
+            color: 0xff0008,
+            description: rawMessage
+          });
+          msg = ``;
+        } else {
+          msg = `:no_entry_sign: ${msg}`;
+        }
       } else if (message.formatting == "system") {
-        msg = `:loudspeaker: ${msg}`;
+        if (withEmbeds) {
+          embeds.push({
+            title: "System",
+            color: 0xff0008,
+            description: rawMessage
+          });
+          msg = ``;
+        } else {
+          msg = `:loudspeaker: ${msg}`;
+        }
       }
 
-      if (target.webhook != null) {
-        const webhook = new WebhookClient({ url: target.webhook });
+      try {
+        if (target.webhook != null) {
+          const webhook = new WebhookClient({ url: target.webhook });
 
-        await webhook.send({
-          username: message.from.name,
-          avatarURL: message.from.icon,
-          content: msg,
-          options: {
-            flags: ["SuppressEmbeds", "SuppressNotifications"],
-            allowedMentions: {}
+          await webhook.send({
+            username: message.from.name,
+            avatarURL: message.from.icon,
+            content: msg,
+            embeds: embeds,
+            options: {
+              flags: ["SuppressNotifications"],
+              allowedMentions: {}
+            }
+          });
+        } else {
+          await (channel as TextBasedChannel).send({
+            content: msg,
+            embeds: embeds,
+            options: {
+              flags: ["SuppressNotifications"],
+              allowedMentions: {}
+            }
+          });
+        }
+      } catch (e) {
+        if (
+          withEmbeds &&
+          e != null &&
+          e.toString().includes("Missing Permissions")
+        ) {
+          if (target.webhook != null) {
+            this.noEmbeds.push(target.webhook);
+          } else if (target.channelId != null) {
+            this.noEmbeds.push(target.channelId);
           }
-        });
-      } else {
-        await (channel as TextBasedChannel).send({
-          content: msg,
-          options: {
-            flags: ["SuppressEmbeds", "SuppressNotifications"],
-            allowedMentions: {}
-          }
-        });
+
+          this.sendMessageToChannel(target, message, false);
+
+          return;
+        }
+
+        throw e;
       }
     });
   }

@@ -70,8 +70,8 @@ export class KoLClient implements ChatChannel {
     this._loginParameters.append("secure", "0");
     this._loginParameters.append("submitbutton", "Log In");
 
-    for (const channel of this.channels) {
-      console.log(username + " will be listening to " + channel.holderId);
+    if (!this.channels) {
+      return;
     }
   }
 
@@ -588,6 +588,13 @@ export class KoLClient implements ChatChannel {
         return [];
       }
 
+      // TODO Save the last seen message ID into a file whenever it changes.
+      // When the bot restarts, it fetches `1` and will skip all message ID's that are <= that saved ID
+      // Then sends all the new messages, but probably with a timestamp
+      // If the bot knows that its definitely lost some messages, then it'll possibly send a message somewhere that says as much
+      // Note that kol will only resend messages sent in the last hour. And by that, I mean it forgets every message on the hour mark. So only messages from 4am onwards will be fetchable until 5am, then only 5am messages. We can just provide `1`, I don't think a more accurate last message is needed. Can just provide the last message ID minus one since the first message will obviously be the one we saw if its still available.
+      // Then back to normal behavior
+
       const newChatMessagesResponse = await this.visitUrl(
         "newchatmessages.php",
         {
@@ -627,20 +634,29 @@ export class KoLClient implements ChatChannel {
       const listeningTo = await this.getChannelsListening();
 
       for (const channel of listeningTo) {
-        if (KoLClient.privateChannels.includes(channel)) {
+        if (!KoLClient.privateChannels.includes(channel)) {
           continue;
         }
 
-        console.log("Not listening to `" + channel + "`");
+        console.log(
+          `${this.getUsername()} no longer listening to "${channel}"`
+        );
         await this.useChatMacro("/listen " + channel);
       }
 
       for (const channel of KoLClient.privateChannels) {
-        if (!hasChannels.includes(channel) || listeningTo.includes(channel)) {
+        if (!hasChannels.includes(channel)) {
           continue;
         }
 
-        console.log("Listening to `" + channel + "`");
+        if (listeningTo.includes(channel)) {
+          console.log(
+            `${this.getUsername()} already listening to "${channel}"`
+          );
+          continue;
+        }
+
+        console.log(`${this.getUsername()} now listening to "${channel}"`);
         await this.useChatMacro("/listen " + channel);
       }
     } else {
@@ -649,10 +665,13 @@ export class KoLClient implements ChatChannel {
 
       for (const channel of hasChannels) {
         if (listeningTo.includes(channel)) {
+          console.log(
+            `${this.getUsername()} already listening to "${channel}"`
+          );
           continue;
         }
 
-        console.log("Listening to `" + channel + "`");
+        console.log(`${this.getUsername()} now listening to "${channel}"`);
         await this.useChatMacro("/listen " + channel);
       }
     }
@@ -792,7 +811,7 @@ export class KoLClient implements ChatChannel {
           message.who.id &&
           (messageType == "mod announcement" || messageType == "mod warning")
         ) {
-          sender = `[${sender}] (#${message.who.id})`;
+          sender = "#" + message.who.id;
         }
 
         const msg = cleanupKolMessage(sender, message.msg, messageType);
@@ -802,7 +821,10 @@ export class KoLClient implements ChatChannel {
           sender: sender,
           message: msg,
           formatting: messageType,
-          encoding: "ascii"
+          encoding: "ascii",
+          previewLinks:
+            message.channel != null &&
+            KoLClient.privateChannels.includes(message.channel.toLowerCase())
         });
       });
     } catch (e) {
@@ -828,16 +850,23 @@ export class KoLClient implements ChatChannel {
         let handlingRollover = this.isRollover();
 
         this.messages.push(...(await this.fetchNewMessages()));
+        const mutex = new Mutex();
 
-        setInterval(async () => {
-          this.messages.push(...(await this.fetchNewMessages()));
-
-          // If the last whisper check was during rollover, and it's no longer rollover
-          if (handlingRollover && !this.isRollover()) {
-            handlingRollover = false;
-          } else {
-            handlingRollover = this.isRollover();
+        setInterval(() => {
+          if (mutex.isLocked()) {
+            return;
           }
+
+          mutex.runExclusive(async () => {
+            this.messages.push(...(await this.fetchNewMessages()));
+
+            // If the last whisper check was during rollover, and it's no longer rollover
+            if (handlingRollover && !this.isRollover()) {
+              handlingRollover = false;
+            } else {
+              handlingRollover = this.isRollover();
+            }
+          });
         }, 3000);
 
         this.processMessage();

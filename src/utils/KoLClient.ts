@@ -550,7 +550,7 @@ export class KoLClient implements ChatChannel {
         return;
       }
 
-      await this.sendMessageRetry(msg);
+      await this.sendMessageRetry("/" + channel + " " + msg);
     }
   }
 

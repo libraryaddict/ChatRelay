@@ -66,7 +66,7 @@ export class DiscordHandler implements ChatChannel {
         "\\$1"
       );
 
-      const sender = message.sender;
+      const sender = message.sender.replaceAll(/([*_~])/gi, "\\$1");
       let senderName = sender;
 
       if (

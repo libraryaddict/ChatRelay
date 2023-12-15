@@ -146,7 +146,7 @@ export class KoLClient implements ChatChannel {
     //console.log("`" + response + "`");
 
     const match = response.match(
-      / channel <b>([a-z]+)<\/b>(?: and listening to <b>(.*?)<\/b>)/
+      / channel <b>([a-z]*)<\/b>(?: and listening to <b>(.*?)<\/b>)/
     );
 
     if (match == null) {
@@ -155,7 +155,9 @@ export class KoLClient implements ChatChannel {
 
     const channels: string[] = [];
 
-    channels.push(match[1]);
+    if (match[1] != "") {
+      channels.push(match[1]);
+    }
 
     if (match[2] != null) {
       for (const ch of match[2].split(/ and |, /g)) {

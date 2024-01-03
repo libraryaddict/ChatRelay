@@ -142,7 +142,7 @@ export class KoLClient implements ChatChannel {
 
     const channels: string[] = [];
 
-    for (const match of res.matchAll(/, channel: '(.+?)', msg: /)) {
+    for (const match of res.matchAll(/, channel: '(.+?)', msg: /g)) {
       channels.push(match[1]);
     }
 

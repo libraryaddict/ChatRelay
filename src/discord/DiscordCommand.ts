@@ -3,7 +3,7 @@ import {
   ApplicationCommandOptionType,
   ChatInputApplicationCommandData,
   Client,
-  CommandInteraction,
+  CommandInteraction
 } from "discord.js";
 import { DiscordHandler } from "../DiscordHandler";
 
@@ -15,6 +15,8 @@ export interface Command extends ChatInputApplicationCommandData {
 
   run: (client: Client, interaction: CommandInteraction) => void;
 }
+
+export class ExportChatCommand {}
 
 export class ChatCommand {
   //implements Command {
@@ -29,20 +31,20 @@ export class ChatCommand {
       choices: [
         {
           name: "Add",
-          value: "add",
+          value: "add"
         },
         {
           name: "Remove",
-          value: "remove",
-        },
-      ],
+          value: "remove"
+        }
+      ]
     },
     {
       name: "channel",
       type: ApplicationCommandOptionType.String,
       description: "The kol channel to handle",
-      required: true,
-    },
+      required: true
+    }
   ];
 
   discordHandler: DiscordHandler;
@@ -55,14 +57,20 @@ export class ChatCommand {
 
   run(client: Client, interaction: CommandInteraction) {
     if (!interaction.isChatInputCommand()) {
-      interaction.followUp({ content: "An error has occured, not a chat input command." });
+      interaction.followUp({
+        content: "An error has occured, not a chat input command."
+      });
+
       return;
     }
 
     const action = interaction.options.getString("action");
 
     if (action != "add" && action != "remove") {
-      interaction.followUp({ content: "An error has occured, not a valid action" });
+      interaction.followUp({
+        content: "An error has occured, not a valid action"
+      });
+
       return;
     }
 

@@ -136,33 +136,14 @@ export class KoLClient implements ChatChannel {
   async getChannelsListening(): Promise<string[]> {
     // <font color=green><a target=mainpane href="showplayer.php?who=3469406"><b style="color: green;">Irrat (#3469406)</b></a>, the Level 14 Whale Boxer<br>This player is currently online in channel <b>trade</b> and listening to <b>challenge, clan, dread, foodcourt, games, hardcore and talkie</b>.</font><br>
 
-    const response = (
-      await this.visitUrl("submitnewchat.php", {
-        graf: `/clan /whois ${this.getUsername()}`,
-        j: 1
-      })
-    )["output"] as string;
+    const res = (await this.visitUrl(`mchat.php`)) as string;
 
     //console.log("`" + response + "`");
 
-    const match = response.match(
-      / channel <b>([a-z]*)<\/b>(?: and listening to <b>(.*?)<\/b>)/
-    );
-
-    if (match == null) {
-      return [];
-    }
-
     const channels: string[] = [];
 
-    if (match[1] != "") {
+    for (const match of res.matchAll(/, channel: '(.+?)', msg: /)) {
       channels.push(match[1]);
-    }
-
-    if (match[2] != null) {
-      for (const ch of match[2].split(/ and |, /g)) {
-        channels.push(ch);
-      }
     }
 
     return channels;

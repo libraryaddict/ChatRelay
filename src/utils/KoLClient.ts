@@ -610,6 +610,8 @@ export class KoLClient implements ChatChannel {
   }
 
   async doInitialChannelJoining(): Promise<void> {
+    const listenTo = this.channels.map((c) => c.holderId);
+
     if (this.accountType == "CLAN") {
       await this.useChatMacro("/channel clan");
 
@@ -647,14 +649,27 @@ export class KoLClient implements ChatChannel {
       const listeningTo = await this.getChannelsListening();
 
       for (const channel of hasChannels) {
-        if (listeningTo.includes(channel)) {
+        if (listeningTo.includes(channel) && listenTo.includes(channel)) {
           console.log(
             `${this.getUsername()} already listening to "${channel}"`
           );
           continue;
         }
 
-        console.log(`${this.getUsername()} now listening to "${channel}"`);
+        if (listenTo.includes(channel)) {
+          console.log(`${this.getUsername()} now listening to "${channel}"`);
+        } else {
+          if (listeningTo.indexOf(channel) == 0) {
+            console.log(
+              `${this.getUsername()} can't unlisten to "${channel}" as its the main channel? Bot dev too lazy to fix this`
+            );
+          } else {
+            console.log(
+              `${this.getUsername()} no longer listening to "${channel}"`
+            );
+          }
+        }
+
         await this.useChatMacro("/listen " + channel);
       }
     }

@@ -125,7 +125,7 @@ export function getBadKolEffects(): string[] {
     "Bruised Jaw",
     "So Much Holiday Fun!",
     "On Safari",
-    "Harpooned and Marooned"
+    "Harpooned and Marooned",
   ].map((s) => s.toLowerCase());
 }
 
@@ -226,30 +226,61 @@ export function stripHtml(message: string): string {
  *
  * 260 is the rough limit, but given it injects spaces in 20+ long words. Lower that to 245
  */
-export function splitMessage(message: string, limit: number = 245): string[] {
+export function splitMessage(
+  prefix: string,
+  message: string,
+  limit: number = 245
+): string[] {
+  limit -= encodeToKolEncoding(prefix).length;
+
   // TODO Try to honor spaces
-  let encodedRemainder = encode(message);
-  const messages: string[] = [];
+  let remaining: [string, string][] = message
+    .split("")
+    .map((s) => [s, encodeToKolEncoding(s)]);
 
-  if (encodedRemainder.length > limit) {
-    let end = limit;
-    let toSnip: string;
+  const nextSpace = (): [number, number] => {
+    let index = 0;
+    let len = 0;
 
-    // Make sure we don't leave html entities out
-    while (
-      !message.includes(
-        (toSnip = decode(encodedRemainder.substring(0, end)))
-      ) ||
-      !message.includes(decode(encodedRemainder.substring(end)))
-    ) {
-      end--;
+    for (; index < remaining.length; index++) {
+      if (remaining[index][0] != " " && len < 20) {
+        len += remaining[index][1].length;
+        continue;
+      }
+
+      break;
     }
 
-    encodedRemainder = encodedRemainder.substring(end);
-    messages.push(toSnip);
+    return [index, len];
+  };
+
+  const messages: string[] = [];
+  let currentString = "";
+  let currentLength = 0;
+
+  const resetString = () => {
+    if (currentString.length == 0) return;
+
+    messages.push(prefix + currentString.trim());
+    currentString = "";
+    currentLength = 0;
+  };
+
+  while (remaining.length > 0) {
+    const [space, nextLen] = nextSpace();
+
+    if (nextLen + currentLength > limit) {
+      resetString();
+    }
+
+    currentLength += nextLen + 1;
+    currentString += remaining
+      .splice(0, space + 1)
+      .map((s) => s[0])
+      .join("");
   }
 
-  messages.push(decode(encodedRemainder));
+  resetString();
 
   return messages;
 }

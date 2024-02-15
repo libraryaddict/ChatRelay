@@ -40,5 +40,5 @@
       }
     ],
     "@typescript-eslint/no-explicit-any": ["off"]
-  }
+  },"include":["**/*.test.ts"]
 }

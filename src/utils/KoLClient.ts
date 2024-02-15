@@ -9,7 +9,7 @@ import {
   ChannelId,
   ChatMessage,
   KolAccountType,
-  KolEffect
+  KolEffect,
 } from "./Typings";
 import {
   cleanupKolMessage,
@@ -18,7 +18,7 @@ import {
   getPublicMessageType,
   humanReadableTime,
   splitMessage,
-  stripHtml
+  stripHtml,
 } from "./Utils";
 import { ChatManager } from "../ChatManager";
 import { Mutex } from "async-mutex";
@@ -39,7 +39,7 @@ export class KoLClient implements ChatChannel {
     "clan",
     "hobopolis",
     "dread",
-    "slimetube"
+    "slimetube",
   ];
 
   private messages: KOLMessage[] = [];
@@ -116,13 +116,13 @@ export class KoLClient implements ChatChannel {
       sender = `[${sender}]`;
     }
 
-    let msg = `${sender} ${message.message}`;
+    let prefix = `${sender} `;
 
     if (message.formatting == "emote") {
-      msg = "/me " + msg;
+      prefix = "/me " + prefix;
     }
 
-    await this.sendMessage(target.holderId as string, msg);
+    await this.sendMessage(target.holderId as string, prefix, message.message);
   }
 
   getUsername() {
@@ -153,7 +153,7 @@ export class KoLClient implements ChatChannel {
     const response = (
       await this.visitUrl("submitnewchat.php", {
         graf: `/clan /channels`,
-        j: 1
+        j: 1,
       })
     )["output"] as string;
 
@@ -194,13 +194,13 @@ export class KoLClient implements ChatChannel {
         maxRedirects: 0,
         withCredentials: true,
         headers: {
-          cookie: this._credentials?.sessionCookies || ""
+          cookie: this._credentials?.sessionCookies || "",
         },
         params: {
           what: "status",
-          for: "DiscordChat (Maintained by Irrat)"
+          for: "DiscordChat (Maintained by Irrat)",
         },
-        validateStatus: (status) => status === 302 || status === 200
+        validateStatus: (status) => status === 302 || status === 200,
       }
     );
 
@@ -214,7 +214,7 @@ export class KoLClient implements ChatChannel {
       effects.push({
         name: k[0],
         turns: parseInt(k[1]),
-        effectId: k[4]
+        effectId: k[4],
       });
     }
 
@@ -235,7 +235,7 @@ export class KoLClient implements ChatChannel {
       formatting: "bot",
       sender: this.getUsername() ?? "Me the bot",
       message: message,
-      encoding: "ascii"
+      encoding: "ascii",
     });
   }
 
@@ -267,7 +267,7 @@ export class KoLClient implements ChatChannel {
     for (const effect of effects) {
       await this.visitUrl("uneffect.php", {
         using: "Yep.",
-        whicheffect: parseInt(effect.effectId)
+        whicheffect: parseInt(effect.effectId),
       });
     }
 
@@ -288,7 +288,7 @@ export class KoLClient implements ChatChannel {
   async getInventory(): Promise<Map<number, number>> {
     const apiResponse = await this.visitUrl("api.php", {
       what: "inventory",
-      for: "DiscordChat (Irrat)"
+      for: "DiscordChat (Irrat)",
     });
 
     const map: Map<number, number> = new Map();
@@ -326,13 +326,13 @@ export class KoLClient implements ChatChannel {
           maxRedirects: 0,
           withCredentials: true,
           headers: {
-            cookie: this._credentials?.sessionCookies || ""
+            cookie: this._credentials?.sessionCookies || "",
           },
           params: {
             what: "status",
-            for: "DiscordChat (Maintained by Irrat)"
+            for: "DiscordChat (Maintained by Irrat)",
           },
-          validateStatus: (status) => status === 302 || status === 200
+          validateStatus: (status) => status === 302 || status === 200,
         }
       );
 
@@ -396,7 +396,7 @@ export class KoLClient implements ChatChannel {
             method: "POST",
             data: this._loginParameters,
             maxRedirects: 0,
-            validateStatus: (status) => status === 302
+            validateStatus: (status) => status === 302,
           }
         );
 
@@ -414,21 +414,21 @@ export class KoLClient implements ChatChannel {
           {
             withCredentials: true,
             headers: {
-              cookie: sessionCookies
+              cookie: sessionCookies,
             },
             params: {
               what: "status",
-              for: "DiscordChat (Maintained by Irrat)"
-            }
+              for: "DiscordChat (Maintained by Irrat)",
+            },
           }
         );
         this._credentials = {
           sessionCookies: sessionCookies,
-          pwdhash: apiResponse.data.pwd
+          pwdhash: apiResponse.data.pwd,
         };
         this._player = {
           id: apiResponse.data.playerid,
-          name: apiResponse.data.name
+          name: apiResponse.data.name,
         };
         console.log("Login success.");
 
@@ -464,13 +464,13 @@ export class KoLClient implements ChatChannel {
         method: method,
         withCredentials: true,
         headers: {
-          cookie: this._credentials?.sessionCookies || ""
+          cookie: this._credentials?.sessionCookies || "",
         },
         params: {
           ...(pwd ? { pwd: this._credentials?.pwdhash } : {}),
-          ...parameters
+          ...parameters,
         },
-        data: data
+        data: data,
       });
 
       if (page.headers["set-cookie"] && this._credentials != null) {
@@ -508,11 +508,15 @@ export class KoLClient implements ChatChannel {
   async useChatMacro(macro: string): Promise<void> {
     await this.visitUrl("submitnewchat.php", {
       graf: `/clan ${macro}`,
-      j: 1
+      j: 1,
     });
   }
 
-  async sendMessage(channel: string, macro: string): Promise<void> {
+  async sendMessage(
+    channel: string,
+    prefix: string,
+    macro: string
+  ): Promise<void> {
     // Strip all repeated spaces with a single space
     macro = macro.replaceAll(/ {2,}/g, " ");
 
@@ -524,7 +528,7 @@ export class KoLClient implements ChatChannel {
     // Too lazy to figure out the regex, so replace any remaining newlines with a space
     macro = macro.replaceAll("\n", " ");
 
-    for (const msg of splitMessage(macro)) {
+    for (const msg of splitMessage(prefix, macro)) {
       if (!KoLClient.privateChannels.includes(channel)) {
         console.log(
           this.getUsername() + " attempted to send to " + channel + ": " + msg
@@ -545,7 +549,7 @@ export class KoLClient implements ChatChannel {
         await this.visitUrl(
           "submitnewchat.php?graf=" + encodeToKolEncoding(msg),
           {
-            j: 1
+            j: 1,
           }
         );
       });
@@ -582,7 +586,7 @@ export class KoLClient implements ChatChannel {
         "newchatmessages.php",
         {
           j: 1,
-          lasttime: this._lastFetchedMessages
+          lasttime: this._lastFetchedMessages,
         }
       );
 
@@ -681,7 +685,7 @@ export class KoLClient implements ChatChannel {
     }
 
     let page: string = await this.visitUrl("clan_viplounge.php", {
-      preaction: "lovetester"
+      preaction: "lovetester",
     });
 
     // Only set to true if we're explicitly denied entry
@@ -822,7 +826,7 @@ export class KoLClient implements ChatChannel {
           encoding: "ascii",
           previewLinks:
             message.channel != null &&
-            KoLClient.privateChannels.includes(message.channel.toLowerCase())
+            KoLClient.privateChannels.includes(message.channel.toLowerCase()),
         });
       });
     } catch (e) {

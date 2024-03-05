@@ -1,14 +1,24 @@
-import { readFileSync } from "fs";
-import { ChannelFlag, ChannelId, KolAccountType } from "./utils/Typings";
+import { existsSync, readFileSync, writeFileSync } from "fs";
+import {
+  ChannelFlag,
+  ChannelId,
+  KolAccountType,
+  ModeratorName,
+} from "./utils/Typings";
+
+const settingsFile = "./data/Settings.json";
+const modNamesFile = "./data/ModeratorNames.json";
+const reasonsFile = "./data/Reactions.json";
+const channelsFile = "./data/Channels.json";
 
 export class Settings {
   getAccountLogins(): AccountLogins {
-    return JSON.parse(readFileSync("./data/Settings.json", "utf-8") || "{}");
+    return JSON.parse(readFileSync(settingsFile, "utf-8") || "{}");
   }
 
   getResponses(): Map<string, string[]> {
     const settings = JSON.parse(
-      readFileSync("./data/Reactions.json", "utf-8") || "{}"
+      readFileSync(reasonsFile, "utf-8") || "{}"
     ) as ResponseSetting[];
     const map = new Map();
 
@@ -19,11 +29,23 @@ export class Settings {
     return map;
   }
 
+  getModNames(): ModeratorName[] {
+    if (!existsSync(modNamesFile)) {
+      return [];
+    }
+
+    return JSON.parse(readFileSync(modNamesFile, "utf-8"));
+  }
+
+  setModNames(modNames: ModeratorName[]) {
+    writeFileSync(modNamesFile, JSON.stringify(modNames), "utf-8");
+  }
+
   getChannelIds(): ChannelId[] {
     const channels: ChannelId[] = [];
 
     const settings = JSON.parse(
-      readFileSync("./data/Channels.json", "utf-8") || "{}"
+      readFileSync(channelsFile, "utf-8") || "{}"
     ) as ChannelSettings;
 
     // These channels want these groups to be added to them
@@ -41,7 +63,8 @@ export class Settings {
         side: channel.side,
         holderId: channel.holderId,
         channelId: channel.channelId,
-        uniqueIdentifier: channel.id ?? channel.holderId + "/" + channel.channelId,
+        uniqueIdentifier:
+          channel.id ?? channel.holderId + "/" + channel.channelId,
         flags: channel.flags ?? [],
       };
 
@@ -96,7 +119,11 @@ export class Settings {
       const channelsInGroup = channelsAreInGroups.get(key);
 
       if (channelsInGroup == null) {
-        console.log("Wanted to listen to '" + key + "' but no channels are registered to it");
+        console.log(
+          "Wanted to listen to '" +
+            key +
+            "' but no channels are registered to it"
+        );
         continue;
       }
 

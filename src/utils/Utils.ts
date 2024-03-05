@@ -1,5 +1,6 @@
 import { decode, encode } from "html-entities";
-import { KOLMessage, PublicMessageType } from "./Typings";
+import { KOLMessage, ModeratorName, PublicMessageType } from "./Typings";
+import { existsSync } from "fs";
 
 /**
  * Start KoL's special encoding

@@ -1,20 +1,40 @@
 import { DiscordHandler } from "./DiscordHandler";
 import { Settings } from "./Settings";
 import { KoLClient } from "./utils/KoLClient";
-import { ChannelId, ChatChannel, ChatMessage } from "./utils/Typings";
+import {
+  ChannelId,
+  ChatChannel,
+  ChatMessage,
+  ModeratorName,
+} from "./utils/Typings";
 
 export class ChatManager {
   channels: ChatChannel[] = [];
   channelIds: ChannelId[];
   ignoredChatRelays: string[];
   responses: Map<string, string[]>;
+  moderatorNames: ModeratorName[];
+
+  getModeratorNames() {
+    return this.moderatorNames;
+  }
+
+  setModeratorNames(modNames: ModeratorName[]) {
+    this.moderatorNames = modNames;
+
+    const sets = new Settings();
+    sets.setModNames(modNames);
+  }
 
   startChannels() {
     const sets = new Settings();
     const settings = sets.getAccountLogins();
     this.channelIds = sets.getChannelIds();
-    this.ignoredChatRelays = (settings.ignoreChat ?? []).map((s) => s.toLowerCase());
+    this.ignoredChatRelays = (settings.ignoreChat ?? []).map((s) =>
+      s.toLowerCase()
+    );
     this.responses = sets.getResponses();
+    this.moderatorNames = sets.getModNames();
 
     if (settings.discordToken) {
       this.channels.push(new DiscordHandler(this, settings.discordToken));
@@ -34,7 +54,9 @@ export class ChatManager {
       const channels = accounts.get(kolAccount.username);
 
       if (channels == null) {
-        console.log(`Can't login to ${kolAccount.username}, no channels using it`);
+        console.log(
+          `Can't login to ${kolAccount.username}, no channels using it`
+        );
         continue;
       }
 
@@ -46,7 +68,13 @@ export class ChatManager {
       accounts.delete(kolAccount.username);
 
       this.channels.push(
-        new KoLClient(this, channels, kolAccount.username, kolAccount.password, kolAccount.type)
+        new KoLClient(
+          this,
+          channels,
+          kolAccount.username,
+          kolAccount.password,
+          kolAccount.type
+        )
       );
     }
 
@@ -97,7 +125,10 @@ export class ChatManager {
       await chatChannel.sendMessageToChannel(channel, message);
     } catch (e) {
       console.log(
-        "Error occured when trying to send message to '" + channel.uniqueIdentifier + "': " + e
+        "Error occured when trying to send message to '" +
+          channel.uniqueIdentifier +
+          "': " +
+          e
       );
     }
   }

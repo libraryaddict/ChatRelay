@@ -679,6 +679,23 @@ export class KoLClient implements ChatChannel {
     }
   }
 
+  async lookupName(id: string): Promise<string | undefined> {
+    const response = (
+      await this.visitUrl("submitnewchat.php", {
+        graf: `/clan /whois ${id}`,
+        j: 1,
+      })
+    )["output"] as string;
+
+    const match = response.match(/>([^<>]+) \(#\d+\)</);
+
+    if (match == null) {
+      return undefined;
+    }
+
+    return match[1];
+  }
+
   async checkFortuneTeller() {
     if (this.fortuneTeller == "DOESNT EXIST") {
       return;
@@ -813,7 +830,30 @@ export class KoLClient implements ChatChannel {
           message.who.id &&
           (messageType == "mod announcement" || messageType == "mod warning")
         ) {
-          sender = "#" + message.who.id;
+          const mods = this.chatManager.getModeratorNames();
+
+          let name = mods.find((m) => m.id == message.who?.id);
+
+          if (name == null && message.who.id.match(/^\d+$/)) {
+            const modName = await this.lookupName(message.who.id);
+
+            if (modName != null) {
+              name = {
+                id: message.who.id,
+                name: modName,
+              };
+
+              mods.push(name);
+            }
+
+            this.chatManager.setModeratorNames(mods);
+          }
+
+          if (name != null) {
+            sender = `${name.name} (#${name.id})`;
+          } else {
+            sender = "#" + message.who.id;
+          }
         }
 
         const msg = cleanupKolMessage(sender, message.msg, messageType);

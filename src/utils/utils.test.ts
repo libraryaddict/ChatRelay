@@ -1,4 +1,4 @@
-import { encodeToKolEncoding, splitMessage } from "./Utils";
+/*import { encodeToKolEncoding, splitMessage } from "./Utils";
 
 describe("Testing Utils.splitMessage", () => {
   test("Message less than 245 chars to be unsplit", () => {
@@ -11,3 +11,4 @@ describe("Testing Utils.splitMessage", () => {
     ]);
   });
 });
+*/

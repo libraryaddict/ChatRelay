@@ -80,3 +80,8 @@ export interface ChatChannel {
 }
 
 export type ChannelFlag = "responses" | "some flag name";
+
+export type ModeratorName = {
+  id: string;
+  name: string;
+};

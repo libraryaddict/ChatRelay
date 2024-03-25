@@ -105,7 +105,7 @@ export class DiscordHandler implements ChatChannel {
           embeds.push({
             title: "Mod Announcement by " + senderName,
             color: 0x2ca816,
-            description: rawMessage
+            description: rawMessage,
           });
           msg = ``;
         } else {
@@ -116,7 +116,7 @@ export class DiscordHandler implements ChatChannel {
           embeds.push({
             title: "Mod Warning by " + senderName,
             color: 0xff0008,
-            description: rawMessage
+            description: rawMessage,
           });
           msg = ``;
         } else {
@@ -127,7 +127,7 @@ export class DiscordHandler implements ChatChannel {
           embeds.push({
             title: "System",
             color: 0xff0008,
-            description: rawMessage
+            description: rawMessage,
           });
           msg = ``;
         } else {
@@ -146,8 +146,8 @@ export class DiscordHandler implements ChatChannel {
             embeds: embeds,
             options: {
               flags: ["SuppressNotifications"],
-              allowedMentions: {}
-            }
+              allowedMentions: {},
+            },
           });
         } else {
           await (channel as TextBasedChannel).send({
@@ -155,8 +155,8 @@ export class DiscordHandler implements ChatChannel {
             embeds: embeds,
             options: {
               flags: ["SuppressNotifications"],
-              allowedMentions: {}
-            }
+              allowedMentions: {},
+            },
           });
         }
       } catch (e) {
@@ -192,8 +192,8 @@ export class DiscordHandler implements ChatChannel {
         "GuildMembers",
         "GuildModeration",
         "MessageContent",
-        "GuildWebhooks"
-      ]
+        "GuildWebhooks",
+      ],
     });
 
     this.client.login(this.token);
@@ -239,7 +239,8 @@ export class DiscordHandler implements ChatChannel {
         ["“", '"'],
         ["”", '"'],
         ["‘", "'"],
-        ["’", "'"]
+        ["’", "'"],
+        ["@", "@\u200b"], // Zero width space (​), prevents @everyone from working.
       ]) {
         msg = msg.replaceAll(p1, p2);
       }
@@ -256,7 +257,7 @@ export class DiscordHandler implements ChatChannel {
         sender: message.member.nickname ?? message.member.displayName,
         message: msg,
         formatting: format,
-        encoding: "utf-8"
+        encoding: "utf-8",
       });
     });
   }

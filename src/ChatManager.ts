@@ -1,11 +1,12 @@
 import { DiscordHandler } from "./DiscordHandler";
+import { DiscordLoggingHandler } from "./logging/DiscordLoggingHandler";
 import { Settings } from "./Settings";
 import { KoLClient } from "./utils/KoLClient";
 import {
   ChannelId,
   ChatChannel,
   ChatMessage,
-  ModeratorName,
+  ModeratorName
 } from "./utils/Typings";
 
 export class ChatManager {
@@ -14,6 +15,7 @@ export class ChatManager {
   ignoredChatRelays: string[];
   responses: Map<string, string[]>;
   moderatorNames: ModeratorName[];
+  antidoteRequestFromName: string;
 
   getModeratorNames() {
     return this.moderatorNames;
@@ -29,6 +31,7 @@ export class ChatManager {
   startChannels() {
     const sets = new Settings();
     const settings = sets.getAccountLogins();
+    this.antidoteRequestFromName = settings.antidoteRequestFromName;
     this.channelIds = sets.getChannelIds();
     this.ignoredChatRelays = (settings.ignoreChat ?? []).map((s) =>
       s.toLowerCase()
@@ -36,8 +39,12 @@ export class ChatManager {
     this.responses = sets.getResponses();
     this.moderatorNames = sets.getModNames();
 
+    let discord: DiscordHandler | null = null;
+
     if (settings.discordToken) {
-      this.channels.push(new DiscordHandler(this, settings.discordToken));
+      discord = new DiscordHandler(this, settings.discordToken);
+
+      this.channels.push(discord);
     }
 
     const accounts: Map<string, ChannelId[]> = new Map();
@@ -49,6 +56,8 @@ export class ChatManager {
 
       accounts.get(channel.owningAccount)?.push(channel);
     }
+
+    let loggingAccount: KoLClient | null = null;
 
     for (const kolAccount of settings.kolLogins) {
       const channels = accounts.get(kolAccount.username);
@@ -67,28 +76,39 @@ export class ChatManager {
 
       accounts.delete(kolAccount.username);
 
-      this.channels.push(
-        new KoLClient(
-          this,
-          channels,
-          kolAccount.username,
-          kolAccount.password,
-          kolAccount.type
-        )
+      const account = new KoLClient(
+        this,
+        channels,
+        kolAccount.username,
+        kolAccount.password,
+        kolAccount.type
       );
+
+      if (kolAccount.username == settings.playerLoggingAccount) {
+        loggingAccount = account;
+      }
+
+      this.channels.push(account);
     }
 
     for (const name of accounts.keys()) {
       console.log("No kol account found for " + name);
     }
 
-    this.channels.forEach((c) => {
-      const run = async () => {
-        c.start();
-      };
+    const startups: Promise<void>[] = [];
 
-      run();
-    });
+    for (const channel of this.channels) {
+      startups.push(channel.start());
+    }
+
+    if (loggingAccount != null && discord != null) {
+      Promise.allSettled(startups).then(() => {
+        new DiscordLoggingHandler(
+          loggingAccount as KoLClient,
+          discord as DiscordHandler
+        );
+      });
+    }
   }
 
   getResponse(msg: string, name: string): string | undefined {
@@ -118,6 +138,7 @@ export class ChatManager {
 
     if (chatChannel == null) {
       console.log("Can't find a channel for " + channel.uniqueIdentifier);
+
       return;
     }
 
@@ -153,7 +174,7 @@ export class ChatManager {
           message: response,
           sender: message.from.owningAccount,
           formatting: "normal",
-          encoding: "utf8",
+          encoding: "utf8"
         };
 
         Promise.allSettled(promises).then(() => {
@@ -167,7 +188,9 @@ export class ChatManager {
   }
 
   isListeningTo(receiverId: ChannelId, senderId: ChannelId): boolean {
-    if (receiverId == senderId) return false;
+    if (receiverId == senderId) {
+      return false;
+    }
 
     return receiverId.listensTo.includes(senderId);
   }

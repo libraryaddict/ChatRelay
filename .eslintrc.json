@@ -36,9 +36,14 @@
       {
         "blankLine": "always",
         "prev": "*",
-        "next": ["return", "block-like"]
+        "next": ["return", "multiline-block-like"]
+      },
+      {
+        "blankLine": "always",
+        "prev": "multiline-block-like",
+        "next": ["*"]
       }
     ],
     "@typescript-eslint/no-explicit-any": ["off"]
-  },"include":["**/*.test.ts"]
+  }
 }

@@ -37,6 +37,16 @@ export type KOLMessage = {
   notnew?: string; // Only seen "1"
 };
 
+export type KolKmail = {
+  id: string; // ID of the kmail itself
+  type: string; // Not sure if it can be anything but 'normal'
+  fromid: string; // The player ID this is from
+  fromname: string; // The sender name
+  message: string; // The actual message, can contain html & \n
+  azunixtime: string; // Seconds epoch
+  localtime: string; // The local time (as per account settings in kol)
+};
+
 export type ServerSide = "Discord" | "KoL";
 export type KolAccountType = "CLAN" | "PUBLIC" | "IGNORE";
 
@@ -76,7 +86,7 @@ export interface ChatChannel {
 
   sendMessageToChannel(target: ChannelId, message: ChatMessage): Promise<void>;
 
-  start(): void;
+  start(): Promise<void>;
 }
 
 export type ChannelFlag = "responses" | "some flag name";

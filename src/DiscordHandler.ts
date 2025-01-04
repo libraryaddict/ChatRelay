@@ -1,5 +1,11 @@
-import { APIEmbed, Client, TextBasedChannel, WebhookClient } from "discord.js";
-import { Command } from "./discord/DiscordCommand";
+import {
+  APIEmbed,
+  Client,
+  Message,
+  OmitPartialGroupDMChannel,
+  Partials,
+  WebhookClient
+} from "discord.js";
 import { ChannelId, ChatChannel, ChatMessage } from "./utils/Typings";
 import { ChatManager } from "./ChatManager";
 import { unemojify } from "node-emoji";
@@ -7,11 +13,13 @@ import { Mutex } from "async-mutex";
 
 export class DiscordHandler implements ChatChannel {
   client: Client;
-  commands: Command[];
   chatManager: ChatManager;
   token: string;
   mutex: Mutex = new Mutex();
   noEmbeds: string[] = [];
+  directMessageHandler: (
+    message: OmitPartialGroupDMChannel<Message<boolean>>
+  ) => void;
 
   constructor(chatManager: ChatManager, token: string) {
     this.token = token;
@@ -105,7 +113,7 @@ export class DiscordHandler implements ChatChannel {
           embeds.push({
             title: "Mod Announcement by " + senderName,
             color: 0x2ca816,
-            description: rawMessage,
+            description: rawMessage
           });
           msg = ``;
         } else {
@@ -116,7 +124,7 @@ export class DiscordHandler implements ChatChannel {
           embeds.push({
             title: "Mod Warning by " + senderName,
             color: 0xff0008,
-            description: rawMessage,
+            description: rawMessage
           });
           msg = ``;
         } else {
@@ -127,7 +135,7 @@ export class DiscordHandler implements ChatChannel {
           embeds.push({
             title: "System",
             color: 0xff0008,
-            description: rawMessage,
+            description: rawMessage
           });
           msg = ``;
         } else {
@@ -146,18 +154,22 @@ export class DiscordHandler implements ChatChannel {
             embeds: embeds,
             options: {
               flags: ["SuppressNotifications"],
-              allowedMentions: {},
-            },
+              allowedMentions: {}
+            }
           });
-        } else {
-          await (channel as TextBasedChannel).send({
+        } else if (channel.isSendable()) {
+          await channel.send({
             content: msg,
             embeds: embeds,
             options: {
               flags: ["SuppressNotifications"],
-              allowedMentions: {},
-            },
+              allowedMentions: {}
+            }
           });
+        } else {
+          console.log(
+            "Cannot send to " + channel + ", isSendable() reported false"
+          );
         }
       } catch (e) {
         if (
@@ -181,7 +193,7 @@ export class DiscordHandler implements ChatChannel {
     });
   }
 
-  start() {
+  async start(): Promise<void> {
     console.log("Starting discord client..");
 
     this.client = new Client({
@@ -193,10 +205,12 @@ export class DiscordHandler implements ChatChannel {
         "GuildModeration",
         "MessageContent",
         "GuildWebhooks",
+        "DirectMessages"
       ],
+      partials: [Partials.Channel, Partials.Message]
     });
 
-    this.client.login(this.token);
+    await this.client.login(this.token);
 
     this.client.on("ready", () => {
       console.log("Client logged in!");
@@ -205,14 +219,23 @@ export class DiscordHandler implements ChatChannel {
     //  this.client.application?.commands.create();
 
     this.client.on("messageCreate", (message) => {
-      // If not in guild, or is a bot
-      if (message.member == null || !message.inGuild() || message.author.bot) {
+      // If is a bot
+      if (message.author.bot) {
         return;
       }
 
       let msg = message.cleanContent;
 
       if (msg.length <= 0) {
+        return;
+      }
+
+      // If not in guild
+      if (message.member == null || !message.inGuild()) {
+        if (message.channel.isDMBased() && this.directMessageHandler != null) {
+          this.directMessageHandler(message);
+        }
+
         return;
       }
 
@@ -240,7 +263,8 @@ export class DiscordHandler implements ChatChannel {
         ["”", '"'],
         ["‘", "'"],
         ["’", "'"],
-        ["@", "@\u200b"], // Zero width space (​), prevents @everyone from working.
+        // eslint-disable-next-line no-irregular-whitespace
+        ["@", "@\u200b"] // Zero width space (​), prevents @everyone from working.
       ]) {
         msg = msg.replaceAll(p1, p2);
       }
@@ -257,7 +281,7 @@ export class DiscordHandler implements ChatChannel {
         sender: message.member.nickname ?? message.member.displayName,
         message: msg,
         formatting: format,
-        encoding: "utf-8",
+        encoding: "utf-8"
       });
     });
   }

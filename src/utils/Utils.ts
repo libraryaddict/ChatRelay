@@ -1,6 +1,5 @@
-import { decode, encode } from "html-entities";
-import { KOLMessage, ModeratorName, PublicMessageType } from "./Typings";
-import { existsSync } from "fs";
+import { decode } from "html-entities";
+import { KOLMessage, PublicMessageType } from "./Typings";
 
 /**
  * Start KoL's special encoding
@@ -11,6 +10,7 @@ const SAFECHARS =
   "abcdefghijklmnopqrstuvwxyz" +
   "-_.!~*'()"; // RFC2396 Mark characters
 const HEX = "0123456789ABCDEF";
+const originalRollover = 1044847800;
 
 export function encodeToKolEncoding(x: string): string {
   // The Javascript escape and unescape functions do not correspond
@@ -69,12 +69,17 @@ export function cleanupKolMessage(
   msg = stripHtml(msg);
 
   if (msg.trim().length == 0) {
-    msg = "RAW: " + tempMsg;
+    return msg;
   }
 
   msg = decode(msg);
 
-  if (messageType == "emote" && msg.startsWith(sender)) {
+  if (
+    messageType == "emote" &&
+    sender != null &&
+    sender.length > 0 &&
+    msg.startsWith(sender)
+  ) {
     msg = msg.replace(sender, "").trim();
   }
 
@@ -235,7 +240,7 @@ export function splitMessage(
   limit -= encodeToKolEncoding(prefix).length;
 
   // TODO Try to honor spaces
-  let remaining: [string, string][] = message
+  const remaining: [string, string][] = message
     .split("")
     .map((s) => [s, encodeToKolEncoding(s)]);
 
@@ -260,7 +265,9 @@ export function splitMessage(
   let currentLength = 0;
 
   const resetString = () => {
-    if (currentString.length == 0) return;
+    if (currentString.length == 0) {
+      return;
+    }
 
     messages.push(prefix + currentString.trim());
     currentString = "";
@@ -334,4 +341,11 @@ export function getPublicMessageType(
   }
 
   return undefined;
+}
+
+export function getKolDay(time: number = Math.round(Date.now() / 1000)) {
+  const timeDiff = time - originalRollover;
+  const daysSince = timeDiff / (24 * 60 * 60);
+
+  return Math.floor(daysSince);
 }

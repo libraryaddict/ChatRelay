@@ -3,7 +3,7 @@ import {
   ChannelFlag,
   ChannelId,
   KolAccountType,
-  ModeratorName,
+  ModeratorName
 } from "./utils/Typings";
 
 const settingsFile = "./data/Settings.json";
@@ -65,13 +65,15 @@ export class Settings {
         channelId: channel.channelId,
         uniqueIdentifier:
           channel.id ?? channel.holderId + "/" + channel.channelId,
-        flags: channel.flags ?? [],
+        flags: channel.flags ?? []
       };
 
       channels.push(chan);
 
       for (const id of [channel.owner, chan.uniqueIdentifier]) {
-        if (id == null) continue;
+        if (id == null) {
+          continue;
+        }
 
         if (!channelsAreInGroups.has(id)) {
           channelsAreInGroups.set(id, []);
@@ -107,7 +109,9 @@ export class Settings {
         }
 
         for (const channel of channels) {
-          if (addToGroup?.includes(channel)) continue;
+          if (addToGroup?.includes(channel)) {
+            continue;
+          }
 
           addToGroup?.push(channel);
         }
@@ -129,7 +133,9 @@ export class Settings {
 
       for (const channel of channels) {
         for (const channelInGroup of channelsInGroup) {
-          if (channel.listensTo.includes(channelInGroup)) continue;
+          if (channel.listensTo.includes(channelInGroup)) {
+            continue;
+          }
 
           channel.listensTo.push(channelInGroup);
         }
@@ -176,6 +182,8 @@ export type KolLogin = {
 
 export type AccountLogins = {
   discordToken: string;
+  playerLoggingAccount: string;
+  antidoteRequestFromName: string;
   kolLogins: KolLogin[];
   ignoreChat: string[];
 };

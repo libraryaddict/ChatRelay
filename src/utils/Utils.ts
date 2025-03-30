@@ -83,7 +83,10 @@ export function cleanupKolMessage(
     msg = msg.replace(sender, "").trim();
   }
 
+  // Kol has turned links with chars longer than 40, into a abbreviated link
   for (const link of links) {
+    const orig =
+      "[link]" + (link.length > 40 ? link.substring(0, 40) + "..." : link);
     let newMsg = "";
     let state = 0;
     let startAt = 0;
@@ -92,10 +95,7 @@ export function cleanupKolMessage(
       if (state == 0 && i < msg.length) {
         if (
           msg.charAt(i) == " " ||
-          !msg
-            .substring(i)
-            .replaceAll(" ", "")
-            .startsWith("[link]" + link)
+          !msg.substring(i).replaceAll(" ", "").startsWith(orig)
         ) {
           continue;
         }
@@ -104,7 +104,7 @@ export function cleanupKolMessage(
         startAt = i;
         newMsg = msg.substring(0, i) + link;
       } else if (state == 1) {
-        if (msg.substring(startAt, i).replaceAll(" ", "") != "[link]" + link) {
+        if (msg.substring(startAt, i).replaceAll(" ", "") != orig) {
           continue;
         }
 
@@ -131,7 +131,7 @@ export function getBadKolEffects(): string[] {
     "Bruised Jaw",
     "So Much Holiday Fun!",
     "On Safari",
-    "Harpooned and Marooned",
+    "Harpooned and Marooned"
   ].map((s) => s.toLowerCase());
 }
 

@@ -60,12 +60,36 @@ export function cleanupKolMessage(
   const links: string[] = [];
 
   for (const match of msg.matchAll(/href="([^"]*)"/g)) {
-    links.push(decode(match[1]));
+    links.push(match[1]);
+  }
+
+  for (const link of links) {
+    const line = `<a target=_blank href="${link}"><font color=blue>[link]</font></a>`;
+    const index = msg.indexOf(line);
+
+    if (index < 0) {
+      continue;
+    }
+
+    let dotIndex = msg.indexOf("...", index + line.length) + 3;
+
+    if (dotIndex <= index) {
+      dotIndex = msg.indexOf(link, index + line.length);
+
+      if (dotIndex >= index) {
+        dotIndex += line.length;
+      }
+    }
+
+    if (dotIndex <= index) {
+      continue;
+    }
+
+    msg = msg.substring(0, index) + " " + link + " " + msg.substring(dotIndex);
   }
 
   msg = msg.replaceAll(/<[Bb][Rr]>/g, "\n");
 
-  const tempMsg = msg;
   msg = stripHtml(msg);
 
   if (msg.trim().length == 0) {
@@ -81,42 +105,6 @@ export function cleanupKolMessage(
     msg.startsWith(sender)
   ) {
     msg = msg.replace(sender, "").trim();
-  }
-
-  // Kol has turned links with chars longer than 40, into a abbreviated link
-  for (const link of links) {
-    const orig =
-      "[link]" + (link.length > 40 ? link.substring(0, 40) + "..." : link);
-    let newMsg = "";
-    let state = 0;
-    let startAt = 0;
-
-    for (let i = 0; i <= msg.length; i++) {
-      if (state == 0 && i < msg.length) {
-        if (
-          msg.charAt(i) == " " ||
-          !msg.substring(i).replaceAll(" ", "").startsWith(orig)
-        ) {
-          continue;
-        }
-
-        state = 1;
-        startAt = i;
-        newMsg = msg.substring(0, i) + link;
-      } else if (state == 1) {
-        if (msg.substring(startAt, i).replaceAll(" ", "") != orig) {
-          continue;
-        }
-
-        newMsg += msg.substring(i);
-        state = 2;
-        break;
-      }
-    }
-
-    if (state == 2) {
-      msg = newMsg;
-    }
   }
 
   msg = msg.replaceAll(/ {2,}/g, " ");

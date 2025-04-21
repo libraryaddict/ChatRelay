@@ -66,7 +66,7 @@ export function cleanupKolMessage(
     msg = msg.replace(/(&#8203;)+/, "").replace(zeroLengthChar, "");
   }
 
-  for (const match of msg.matchAll(/href="([^"]*)"/g)) {
+  for (const match of msg.matchAll(/<a [^><]*?href="([^"]*)"/g)) {
     links.push(match[1]);
   }
 
@@ -202,7 +202,7 @@ export function stripHtml(message: string): string {
       message =
         message.substring(0, startFrom) + between + message.substring(endFrom);
 
-      return stripHtml(message);
+      message = stripHtml(message);
     }
   }
 
@@ -211,13 +211,9 @@ export function stripHtml(message: string): string {
 
     if (match[0].includes('12x12skull.gif"')) {
       replaceWith = ":skull:";
-    }
-
-    if (match[0].includes('12x12heart.png"')) {
+    } else if (match[0].includes('12x12heart.png"')) {
       replaceWith = ":heart:";
-    }
-
-    if (match[0].includes('12x12snowman.gif"')) {
+    } else if (match[0].includes('12x12snowman.gif"')) {
       replaceWith = ":snowman:";
     }
 

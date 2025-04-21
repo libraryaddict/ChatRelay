@@ -1,4 +1,4 @@
-import { decode } from "html-entities";
+import { decode, decodeEntity, encode } from "html-entities";
 import { KOLMessage, PublicMessageType } from "./Typings";
 
 /**
@@ -59,6 +59,13 @@ export function cleanupKolMessage(
 ): string {
   const links: string[] = [];
 
+  // Strip out zero length characters
+  const zeroLengthChar = decodeEntity(`&ZeroWidthSpace;`);
+
+  while (msg.includes("&#8203;") || msg.includes(zeroLengthChar)) {
+    msg = msg.replace(/(&#8203;)+/, "").replace(zeroLengthChar, "");
+  }
+
   for (const match of msg.matchAll(/href="([^"]*)"/g)) {
     links.push(match[1]);
   }
@@ -71,7 +78,12 @@ export function cleanupKolMessage(
       continue;
     }
 
-    let dotIndex = msg.indexOf("...", index + line.length) + 3;
+    const toLookFor =
+      encode(link.substring(0, Math.min(link.length, 40))) +
+      (link.length > 40 ? "..." : "");
+
+    let dotIndex =
+      msg.indexOf(toLookFor, index + line.length) + toLookFor.length;
 
     if (dotIndex <= index) {
       dotIndex = msg.indexOf(link, index + line.length);

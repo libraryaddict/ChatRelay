@@ -202,10 +202,10 @@ export function stripHtml(message: string): string {
         message.substring(0, startFrom) + between + message.substring(endFrom);
 
       message = stripHtml(message);
-    }
 
-    // TODO is this 'ind++' misplaced? Added because I think it was getting into an inf loop
-    ind++;
+      // TODO is this 'ind++' misplaced? Added because I think it was getting into an inf loop
+      ind++;
+    }
   }
 
   while ((match = message.match(/<.*?>/)) != null) {

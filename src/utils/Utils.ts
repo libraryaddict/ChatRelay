@@ -185,7 +185,6 @@ export function stripHtml(message: string): string {
 
     let ind = 0;
 
-    // Wish I commented this because idk what its trying to do
     while (ind < validClosing.length) {
       if (confOpening[ind][0] > validClosing[ind][0]) {
         ind++;
@@ -201,10 +200,8 @@ export function stripHtml(message: string): string {
       message =
         message.substring(0, startFrom) + between + message.substring(endFrom);
 
-      message = stripHtml(message);
-
-      // TODO is this 'ind++' misplaced? Added because I think it was getting into an inf loop
-      ind++;
+      // Recursive call self
+      return stripHtml(message);
     }
   }
 

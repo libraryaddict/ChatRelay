@@ -1,5 +1,4 @@
 import { DiscordHandler } from "./DiscordHandler";
-import { DiscordLoggingHandler } from "./logging/DiscordLoggingHandler";
 import { Settings } from "./Settings";
 import { KoLClient } from "./utils/KoLClient";
 import {
@@ -99,15 +98,6 @@ export class ChatManager {
 
     for (const channel of this.channels) {
       startups.push(channel.start());
-    }
-
-    if (loggingAccount != null && discord != null) {
-      Promise.allSettled(startups).then(() => {
-        new DiscordLoggingHandler(
-          loggingAccount as KoLClient,
-          discord as DiscordHandler
-        );
-      });
     }
   }
 

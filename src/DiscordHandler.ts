@@ -46,7 +46,10 @@ export class DiscordHandler implements ChatChannel {
     await this.mutex.runExclusive(async () => {
       if (this.client == null || !this.client.isReady()) {
         console.log(
-          "Unable to send message to discord, discord ain't available"
+          `Unable to send message to discord, discord ain't available (
+            ${
+              this.client == null ? "null client" : "client says it isn't ready"
+            }) - Try resetting bot token?`
         );
 
         return;
@@ -210,11 +213,14 @@ export class DiscordHandler implements ChatChannel {
       partials: [Partials.Channel, Partials.Message]
     });
 
-    await this.client.login(this.token);
-
     this.client.on("ready", () => {
-      console.log("Client logged in!");
+      console.log("Discord client logged in!");
     });
+    this.client.on("warn", (msg) => console.log("Discord/WARN: " + msg));
+    this.client.on("error", (msg) => console.log("Discord/ERROR: " + msg));
+
+    console.log("Discord Client now logging in..");
+    await this.client.login(this.token);
 
     //  this.client.application?.commands.create();
 

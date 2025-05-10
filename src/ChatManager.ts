@@ -92,6 +92,10 @@ export class ChatManager {
     }
 
     for (const name of accounts.keys()) {
+      if (name.toLowerCase() == "discord") {
+        continue;
+      }
+
       console.log("No kol account found for " + name);
     }
 

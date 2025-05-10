@@ -66,12 +66,14 @@ export function cleanupKolMessage(
     msg = msg.replace(/(&#8203;)+/, "").replace(zeroLengthChar, "");
   }
 
+  msg = stripHtml(msg, true);
+
   for (const match of msg.matchAll(/<a [^><]*?href="([^"]*)"/g)) {
     links.push(match[1]);
   }
 
   for (const link of links) {
-    const line = `<a target=_blank href="${link}"><font color=blue>[link]</font></a>`;
+    const line = `<a target=_blank href="${link}">[link]</a>`;
     const index = msg.indexOf(line);
 
     if (index < 0) {
@@ -143,80 +145,102 @@ export function humanReadableTime(seconds: number): string {
     .padStart(2, "0")}`;
 }
 
-// This is a bit messy, feel free to make your own.. Needs to basically know about child tags
-export function stripHtml(message: string): string {
-  let match;
-  let startFrom = 0;
-
-  const openingTags: [number, string, string, string?][] = [];
-  const closingTags: [number, string][] = [];
-
-  while (
-    (match = message.match(
-      `^(.{` +
-        startFrom +
-        `}.*?)(<([^/> ]+)[^>]*?(?: title="([^">]*)")?[^>]*?>)`
-    )) != null
-  ) {
-    // Index, Full tag, tag name, title
-    openingTags.push([match[1].length, match[2], match[3], match[4]]);
-
-    startFrom = match[0].length;
+export function stripHtml(
+  message: string,
+  skipUrlTags: boolean = false
+): string {
+  interface OpeningTag {
+    index: number;
+    fullTag: string;
+    tagName: string;
+    title?: string;
   }
 
-  startFrom = 0;
-
-  while ((match = message.match(`^(.{` + startFrom + `}.*?)</([^>]*)>`))) {
-    startFrom = match[0].length;
-    closingTags.push([match[1].length, match[2]]);
+  interface ClosingTag {
+    index: number;
+    tagName: string;
   }
 
-  while (openingTags.length > 0) {
-    const [index, fullTag, name, title] = openingTags[0];
+  // Collect all opening tags with their metadata
+  const openingTags: OpeningTag[] = [];
+  const openingTagRegex = /<([^/>\s]+)(?:\s+([^>]*?))?>/g;
+  let match: RegExpExecArray | null;
 
-    const validClosing = closingTags.filter(
-      ([cInd, cName]) => cInd > index && cName == name
+  while ((match = openingTagRegex.exec(message)) !== null) {
+    const titleMatch = match[2]?.match(/title="([^"]*)"/);
+    openingTags.push({
+      index: match.index,
+      fullTag: match[0],
+      tagName: match[1].toLowerCase(),
+      title: titleMatch?.[1]
+    });
+  }
+
+  // Collect all closing tags
+  const closingTags: ClosingTag[] = [];
+  const closingTagRegex = /<\/([^>]+)>/g;
+
+  while ((match = closingTagRegex.exec(message)) !== null) {
+    closingTags.push({
+      index: match.index,
+      tagName: match[1].toLowerCase()
+    });
+  }
+
+  // Process tags recursively
+  for (const openingTag of openingTags) {
+    const { index: openIndex, fullTag, tagName, title } = openingTag;
+
+    if (skipUrlTags && tagName == "a") {
+      continue;
+    }
+
+    const possibleClosings = closingTags.filter(
+      (closing) => closing.tagName === tagName && closing.index > openIndex
     );
-    const confOpening = openingTags.filter(
-      ([ind, ful, nam]) => ind >= index && nam == name
+
+    const conflictingOpenings = openingTags.filter(
+      (other) => other.tagName === tagName && other.index > openIndex
     );
 
-    openingTags.shift();
+    for (let i = 0; i < possibleClosings.length; i++) {
+      const closingTag = possibleClosings[i];
 
-    let ind = 0;
-
-    while (ind < validClosing.length) {
-      if (confOpening[ind][0] > validClosing[ind][0]) {
-        ind++;
+      if (
+        i < conflictingOpenings.length &&
+        conflictingOpenings[i].index < closingTag.index
+      ) {
         continue;
       }
 
-      const between =
-        title ??
-        message.substring(index + fullTag.length, +validClosing[ind][0]);
-      const endFrom = validClosing[ind][0] + name.length + 3;
-      const startFrom = index;
+      const content =
+        title ?? message.slice(openIndex + fullTag.length, closingTag.index);
 
-      message =
-        message.substring(0, startFrom) + between + message.substring(endFrom);
+      const closingTagLength = closingTag.tagName.length + 3; // </tag>
+      const newMessage =
+        message.slice(0, openIndex) +
+        content +
+        message.slice(closingTag.index + closingTagLength);
 
-      // Recursive call self
-      return stripHtml(message);
+      return stripHtml(newMessage, skipUrlTags);
     }
   }
 
-  while ((match = message.match(/<.*?>/)) != null) {
-    let replaceWith = "";
+  // Replace special images with emojis
+  const emojiReplacements: Record<string, string> = {
+    "12x12skull.gif": ":skull:",
+    "12x12heart.png": ":heart:",
+    "12x12snowman.gif": ":snowman:"
+  };
 
-    if (match[0].includes('12x12skull.gif"')) {
-      replaceWith = ":skull:";
-    } else if (match[0].includes('12x12heart.png"')) {
-      replaceWith = ":heart:";
-    } else if (match[0].includes('12x12snowman.gif"')) {
-      replaceWith = ":snowman:";
-    }
+  message = message.replace(
+    /<img[^>]*?(12x12(?:skull\.gif|heart\.png|snowman\.gif))[^>]*>/gi,
+    (_, filename) => emojiReplacements[filename] || ""
+  );
 
-    message = message.replace(match[0], replaceWith);
+  // Remove any remaining HTML tags
+  if (!skipUrlTags) {
+    message = message.replace(/<[^>]+>/g, "");
   }
 
   return message.trim();

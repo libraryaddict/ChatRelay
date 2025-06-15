@@ -78,15 +78,21 @@ export class KoLClient implements ChatChannel {
   }
 
   async doStatusCheck() {
-    if (this.lastStatusCheck > Date.now() || this._isRollover) {
-      return;
+    try {
+      if (this.lastStatusCheck > Date.now() || this._isRollover) {
+        return;
+      }
+
+      // Every hour
+      this.lastStatusCheck = Date.now() + 1000 * 60 * 60;
+
+      await this.removeBadEffects();
+      await this.checkFortuneTeller();
+    } catch (e) {
+      console.error(
+        `Status check error on ${this.getUsername()}:` + this.getUsername()
+      );
     }
-
-    // Every hour
-    this.lastStatusCheck = Date.now() + 1000 * 60 * 60;
-
-    await this.removeBadEffects();
-    await this.checkFortuneTeller();
   }
 
   isOwner(channelId: ChannelId): boolean {
@@ -964,13 +970,20 @@ export class KoLClient implements ChatChannel {
         }
 
         mutex.runExclusive(async () => {
-          this.messages.push(...(await this.fetchNewMessages()));
+          try {
+            this.messages.push(...(await this.fetchNewMessages()));
 
-          // If the last whisper check was during rollover, and it's no longer rollover
-          if (handlingRollover && !this.isRollover()) {
-            handlingRollover = false;
-          } else {
-            handlingRollover = this.isRollover();
+            // If the last whisper check was during rollover, and it's no longer rollover
+            if (handlingRollover && !this.isRollover()) {
+              handlingRollover = false;
+            } else {
+              handlingRollover = this.isRollover();
+            }
+          } catch (e) {
+            console.error(
+              `Errored on ${this.getUsername()} while fetching messages:`,
+              e
+            );
           }
         });
       }, 3000);

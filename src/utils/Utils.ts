@@ -228,9 +228,9 @@ export function stripHtml(
 
   // Replace special images with emojis
   const emojiReplacements: Record<string, string> = {
-    "12x12skull.gif": ":skull:",
-    "12x12heart.png": ":heart:",
-    "12x12snowman.gif": ":snowman:"
+    "12x12skull.gif": "💀",
+    "12x12heart.png": "❤️",
+    "12x12snowman.gif": "⛄"
   };
 
   message = message.replace(

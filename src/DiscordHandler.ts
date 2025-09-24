@@ -76,10 +76,8 @@ export class DiscordHandler implements ChatChannel {
         /(?<!(?: |^)http[^ ]*)([*_~])/gi,
         "\\$1"
       );
-      // Remove all zero length spaces already in the message
+      // Remove all zero length spaces in the message
       rawMessage = rawMessage.replaceAll(/\u200B/g, "");
-      // Inject zero length space so @ does not work
-      rawMessage = rawMessage.replaceAll(/@(?=[a-zA-Z0-9._])/g, "@\u200B");
 
       // Strip all zero length characters from the sender, and escape three characters
       const sender = message.sender
@@ -165,7 +163,9 @@ export class DiscordHandler implements ChatChannel {
             options: {
               flags: ["SuppressNotifications"],
               allowedMentions: {}
-            }
+            },
+            flags: ["SuppressNotifications"],
+            allowedMentions: {}
           });
         } else if (channel.isSendable()) {
           await channel.send({
@@ -174,7 +174,9 @@ export class DiscordHandler implements ChatChannel {
             options: {
               flags: ["SuppressNotifications"],
               allowedMentions: {}
-            }
+            },
+            flags: ["SuppressNotifications"],
+            allowedMentions: {}
           });
         } else {
           console.log(

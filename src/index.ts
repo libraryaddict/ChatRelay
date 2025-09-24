@@ -12,6 +12,8 @@ process.on("uncaughtException", (err) => {
       console.error("Failed to write to error log:", error);
     }
   });
+
+  console.error(logMessage);
 });
 
 new ChatManager().startChannels();

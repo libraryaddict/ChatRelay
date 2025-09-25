@@ -75,10 +75,10 @@ export type KolEffect = {
 export interface ChatMessage {
   from: ChannelId;
   sender: string;
-  message: string;
+  plaintextMessage: string;
+  discordMessage?: string; // Message to be sent for discord
   formatting: PublicMessageType | undefined;
   encoding: BufferEncoding;
-  previewLinks?: boolean;
 }
 
 export interface ChatChannel {
@@ -95,3 +95,5 @@ export type ModeratorName = {
   id: string;
   name: string;
 };
+
+export type OutputGoal = "plaintext" | "discord";

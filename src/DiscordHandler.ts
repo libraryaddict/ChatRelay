@@ -10,6 +10,7 @@ import { ChannelId, ChatChannel, ChatMessage } from "./utils/Typings";
 import { ChatManager } from "./ChatManager";
 import { unemojify } from "node-emoji";
 import { Mutex } from "async-mutex";
+import { basicSanitization } from "./utils/Utils";
 
 export class DiscordHandler implements ChatChannel {
   client: Client;
@@ -71,18 +72,11 @@ export class DiscordHandler implements ChatChannel {
         return;
       }
 
-      let rawMessage = message.message;
-      rawMessage = rawMessage.replaceAll(
-        /(?<!(?: |^)http[^ ]*)([*_~])/gi,
-        "\\$1"
-      );
-      // Remove all zero length spaces in the message
-      rawMessage = rawMessage.replaceAll(/\u200B/g, "");
+      let rawMessage =
+        message.discordMessage || basicSanitization(message.plaintextMessage);
 
-      // Strip all zero length characters from the sender, and escape three characters
-      const sender = message.sender
-        .replaceAll(/\u200B/g, "")
-        .replaceAll(/([*_~])/gi, "\\$1");
+      // Remove any special characteristics from the sender
+      const sender = basicSanitization(message.sender);
       let senderName = sender;
 
       if (
@@ -94,17 +88,11 @@ export class DiscordHandler implements ChatChannel {
         senderName = `[${sender}]`;
       }
 
-      const linkRegex =
-        /(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*))/g;
-
-      const messageToShow =
-        message.previewLinks == true
-          ? rawMessage
-          : rawMessage.replaceAll(linkRegex, "<$1>");
-      let msg = `**${senderName}** ${messageToShow}`;
+      let msg = `**${senderName}** ${rawMessage}`;
       const embeds: APIEmbed[] = [];
 
       if (message.formatting == "emote") {
+        // I believe this should always be true, but we check regardless
         if (
           rawMessage
             .trim()
@@ -161,10 +149,8 @@ export class DiscordHandler implements ChatChannel {
             content: msg,
             embeds: embeds,
             options: {
-              flags: ["SuppressNotifications"],
               allowedMentions: {}
             },
-            flags: ["SuppressNotifications"],
             allowedMentions: {}
           });
         } else if (channel.isSendable()) {
@@ -172,10 +158,8 @@ export class DiscordHandler implements ChatChannel {
             content: msg,
             embeds: embeds,
             options: {
-              flags: ["SuppressNotifications"],
               allowedMentions: {}
             },
-            flags: ["SuppressNotifications"],
             allowedMentions: {}
           });
         } else {
@@ -294,7 +278,7 @@ export class DiscordHandler implements ChatChannel {
       this.chatManager.onChat({
         from: channelId,
         sender: message.member.nickname ?? message.member.displayName,
-        message: msg,
+        plaintextMessage: msg,
         formatting: format,
         encoding: "utf-8"
       });

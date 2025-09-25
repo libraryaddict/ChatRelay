@@ -1,4 +1,4 @@
-import { decode, decodeEntity, encode } from "html-entities";
+import { decode, encode } from "html-entities";
 import { KOLMessage, PublicMessageType } from "./Typings";
 
 /**
@@ -11,6 +11,9 @@ const SAFECHARS =
   "-_.!~*'()"; // RFC2396 Mark characters
 const HEX = "0123456789ABCDEF";
 const originalRollover = 1044847800;
+type MessageSegment =
+  | { type: "text"; content: string }
+  | { type: "link"; url: string };
 
 export function encodeToKolEncoding(x: string): string {
   // The Javascript escape and unescape functions do not correspond
@@ -55,75 +58,161 @@ export function encodeToKolEncoding(x: string): string {
 export function cleanupKolMessage(
   sender: string,
   msg: string,
-  messageType: PublicMessageType | undefined
+  messageType: PublicMessageType | undefined,
+  outputGoal: "plaintext" | "discord" = "plaintext",
+  allowLinkPreviews = true // Only used on discord
 ): string {
-  const links: string[] = [];
+  // Strip out zero-width space characters
+  msg = msg.replaceAll(/(&#8203;)|(\u200B)/g, "");
+  // Convert <br> to newlines
+  msg = msg.replaceAll(/<br\/?>/gi, "\n");
 
-  // Strip out zero length characters
-  const zeroLengthChar = decodeEntity(`&ZeroWidthSpace;`);
+  const segments: MessageSegment[] = [];
+  // Finds all <a> and only matches on the href, don't care about anything else in that tag
+  const linkRegex = /<a [^>]*href=["'](http[^"']*)["'][^>]*>.*?(?=<\/a>)/gi;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
 
-  while (msg.includes("&#8203;") || msg.includes(zeroLengthChar)) {
-    msg = msg.replace(/(&#8203;)+/, "").replace(zeroLengthChar, "");
-  }
-
-  msg = stripHtml(msg, true);
-
-  for (const match of msg.matchAll(/<a [^><]*?href="([^"]*)"/g)) {
-    links.push(match[1]);
-  }
-
-  for (const link of links) {
-    const line = `<a target=_blank href="${link}">[link]</a>`;
-    const index = msg.indexOf(line);
-
-    if (index < 0) {
-      continue;
+  while ((match = linkRegex.exec(msg)) !== null) {
+    // Add the plain text part that came before this link
+    if (match.index > lastIndex) {
+      segments.push({
+        type: "text",
+        content: stripHtml(msg.substring(lastIndex, match.index), false)
+      });
     }
 
-    const toLookFor =
-      encode(link.substring(0, Math.min(link.length, 40))) +
-      (link.length > 40 ? "..." : "");
+    // Add the link part
+    segments.push({ type: "link", url: match[1] });
+    lastIndex = linkRegex.lastIndex;
+  }
 
-    let dotIndex =
-      msg.indexOf(toLookFor, index + line.length) + toLookFor.length;
+  // Add any remaining plain text after the last link
+  if (lastIndex < msg.length) {
+    segments.push({
+      type: "text",
+      content: stripHtml(msg.substring(lastIndex), false)
+    });
+  }
 
-    if (dotIndex <= index) {
-      dotIndex = msg.indexOf(link, index + line.length);
+  // Remove the plaintext links
+  for (let i = 0; i < segments.length - 1; i++) {
+    const currentSegment = segments[i];
+    const nextSegment = segments[i + 1];
 
-      if (dotIndex >= index) {
-        dotIndex += line.length;
+    removeLink(currentSegment, nextSegment);
+  }
+
+  // Build the final message string
+  let processedMsg = segments
+    .map((segment) => {
+      if (segment.type === "text") {
+        // For plain text, strip all HTML.
+        const content = decode(segment.content);
+
+        if (outputGoal === "discord") {
+          return escapeSpecialCharacters(content);
+        }
+
+        return content;
+      } else {
+        // If we do not plan to modify the url displayed
+        if (outputGoal === "plaintext" || allowLinkPreviews) {
+          return segment.url;
+        }
+
+        // If on discord and not allowing link previews, wrap in <>
+        return `<${segment.url}>`;
       }
-    }
-
-    if (dotIndex <= index) {
-      continue;
-    }
-
-    msg = msg.substring(0, index) + " " + link + " " + msg.substring(dotIndex);
-  }
-
-  msg = msg.replaceAll(/<[Bb][Rr]>/g, "\n");
-
-  msg = stripHtml(msg);
-
-  if (msg.trim().length == 0) {
-    return msg;
-  }
-
-  msg = decode(msg);
+    })
+    .join("");
 
   if (
-    messageType == "emote" &&
+    messageType === "emote" &&
     sender != null &&
     sender.length > 0 &&
-    msg.startsWith(sender)
+    processedMsg.startsWith(sender)
   ) {
-    msg = msg.replace(sender, "").trim();
+    processedMsg = processedMsg.replace(sender, "");
   }
 
-  msg = msg.replaceAll(/ {2,}/g, " ");
+  // Collapse multiple spaces into a single space
+  processedMsg = processedMsg.replaceAll(/ {2,}/g, " ");
 
-  return msg;
+  return processedMsg.trim();
+}
+
+function removeLink(
+  currentSegment: MessageSegment,
+  nextSegment: MessageSegment
+) {
+  // Check for a link segment followed by a text segment
+  if (currentSegment.type !== "link" || nextSegment.type !== "text") {
+    return;
+  }
+
+  const url = currentSegment.url;
+  const textContent = nextSegment.content;
+  let textScanIndex = 0;
+
+  // Attempt to match each character of the URL in the text
+  for (const char of url) {
+    while (
+      textScanIndex < textContent.length &&
+      textContent[textScanIndex] != char &&
+      /\s/.test(textContent[textScanIndex])
+    ) {
+      textScanIndex++;
+    }
+
+    let encodedChar: string;
+
+    // Try to match the character
+    if (textContent[textScanIndex] === char) {
+      textScanIndex++;
+      continue;
+    } else if (
+      textContent
+        .substring(textScanIndex)
+        .startsWith((encodedChar = encode(char)))
+    ) {
+      textScanIndex += encodedChar.length;
+      continue;
+    }
+
+    // If the character doesn't match, check for a "..."
+    if (textContent.substring(textScanIndex).startsWith("...")) {
+      nextSegment.content = textContent.substring(textScanIndex + 3);
+    }
+
+    // It either failed, or it ended with a "..."
+    return;
+  }
+
+  // As it didn't return, the url has a full match
+  nextSegment.content = textContent.substring(textScanIndex);
+}
+
+function escapeSpecialCharacters(text: string): string {
+  // If the goal is discord, allow some common characters and escape the rest
+  // Technically, we can escape .,?!'" but they are common enough that it should never be an issue
+  // Discord seemingly allows us to escape any character that's not a number/letter/space
+  // https://github.com/discord/SimpleAST/blob/master/simpleast-core/src/main/java/com/discord/simpleast/core/simple/SimpleMarkdownRules.kt#L25
+  return text.replaceAll(/([^\da-zA-Z\s\n.,?!'"])/g, "\\$1");
+}
+
+const linkRegex =
+  /(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*))/g;
+
+export function basicSanitization(text: string): string {
+  // Remove all zero length spaces in the message
+  text = text.replaceAll(/\u200B/g, "");
+  // Escape characters
+  text = escapeSpecialCharacters(text);
+
+  text = text.replaceAll(linkRegex, "<$1>");
+
+  return text;
 }
 
 export function getBadKolEffects(): string[] {
@@ -145,10 +234,7 @@ export function humanReadableTime(seconds: number): string {
     .padStart(2, "0")}`;
 }
 
-export function stripHtml(
-  message: string,
-  skipUrlTags: boolean = false
-): string {
+export function stripHtml(message: string, shouldTrim: boolean = true): string {
   interface OpeningTag {
     index: number;
     fullTag: string;
@@ -191,10 +277,6 @@ export function stripHtml(
   for (const openingTag of openingTags) {
     const { index: openIndex, fullTag, tagName, title } = openingTag;
 
-    if (skipUrlTags && tagName == "a") {
-      continue;
-    }
-
     const possibleClosings = closingTags.filter(
       (closing) => closing.tagName === tagName && closing.index > openIndex
     );
@@ -222,15 +304,15 @@ export function stripHtml(
         content +
         message.slice(closingTag.index + closingTagLength);
 
-      return stripHtml(newMessage, skipUrlTags);
+      return stripHtml(newMessage, shouldTrim);
     }
   }
 
   // Replace special images with emojis
   const emojiReplacements: Record<string, string> = {
-    "12x12skull.gif": ":skull:",
-    "12x12heart.png": ":heart:",
-    "12x12snowman.gif": ":snowman:"
+    "12x12skull.gif": "💀",
+    "12x12heart.png": "❤️",
+    "12x12snowman.gif": "⛄"
   };
 
   message = message.replace(
@@ -239,11 +321,13 @@ export function stripHtml(
   );
 
   // Remove any remaining HTML tags
-  if (!skipUrlTags) {
-    message = message.replace(/<[^>]+>/g, "");
+  message = message.replace(/<[^>]+>/g, "");
+
+  if (shouldTrim) {
+    return message.trim();
   }
 
-  return message.trim();
+  return message;
 }
 
 /**

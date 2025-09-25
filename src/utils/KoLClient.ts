@@ -130,7 +130,11 @@ export class KoLClient implements ChatChannel {
       prefix = "/me " + prefix;
     }
 
-    await this.sendMessage(target.holderId as string, prefix, message.message);
+    await this.sendMessage(
+      target.holderId as string,
+      prefix,
+      message.plaintextMessage
+    );
   }
 
   getUsername() {
@@ -242,7 +246,7 @@ export class KoLClient implements ChatChannel {
       from: channel,
       formatting: "bot",
       sender: this.getUsername() ?? "Me the bot",
-      message: message,
+      plaintextMessage: message,
       encoding: "ascii"
     });
   }
@@ -927,17 +931,30 @@ export class KoLClient implements ChatChannel {
           }
         }
 
-        const msg = cleanupKolMessage(sender, message.msg, messageType);
+        const previewLinks =
+          message.channel != null &&
+          KoLClient.privateChannels.includes(message.channel.toLowerCase());
+
+        const plaintextMessage = cleanupKolMessage(
+          sender,
+          message.msg,
+          messageType
+        );
+        const discordMessage = cleanupKolMessage(
+          sender,
+          message.msg,
+          messageType,
+          "discord",
+          previewLinks
+        );
 
         this.chatManager.onChat({
           from: channel,
           sender: sender,
-          message: msg,
+          plaintextMessage: plaintextMessage,
+          discordMessage: discordMessage,
           formatting: messageType,
-          encoding: "ascii",
-          previewLinks:
-            message.channel != null &&
-            KoLClient.privateChannels.includes(message.channel.toLowerCase())
+          encoding: "ascii"
         });
       });
     } catch (e) {

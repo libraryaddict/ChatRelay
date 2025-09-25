@@ -160,12 +160,15 @@ export class ChatManager {
     }
 
     if (doResponses && message.from.flags.includes("responses")) {
-      const response = this.getResponse(message.message, message.sender);
+      const response = this.getResponse(
+        message.plaintextMessage,
+        message.sender
+      );
 
       if (response != null) {
         const newMessage: ChatMessage = {
           from: message.from,
-          message: response,
+          plaintextMessage: response,
           sender: message.from.owningAccount,
           formatting: "normal",
           encoding: "utf8"

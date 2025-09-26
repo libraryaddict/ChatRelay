@@ -13,11 +13,12 @@ import {
   KolKmail
 } from "./Typings";
 import {
-  cleanupKolMessage,
   encodeToKolEncoding,
+  formatMessage,
   getBadKolEffects,
   getPublicMessageType,
   humanReadableTime,
+  removeKolEmote,
   splitMessage,
   stripHtml
 } from "./Utils";
@@ -103,6 +104,11 @@ export class KoLClient implements ChatChannel {
     target: ChannelId,
     message: ChatMessage
   ): Promise<void> {
+    // If this is exclusive, and it is not for kol, this is a dumb hack for `sendBotMessage`
+    if (message.exclusiveTo && message.exclusiveTo != "KoL") {
+      return;
+    }
+
     if (!KoLClient.privateChannels.includes(target.holderId)) {
       console.log(
         "Tried to send a message to '" +
@@ -113,27 +119,10 @@ export class KoLClient implements ChatChannel {
       return;
     }
 
-    // Don't send bot messages to kol, this is a dumb hack for `sendBotMessage`
-    if (message.formatting == "bot") {
-      return;
-    }
-
-    let sender = message.sender;
-
-    if (!sender.startsWith("[") && !sender.endsWith("]")) {
-      sender = `[${sender}]`;
-    }
-
-    let prefix = `${sender} `;
-
-    if (message.formatting == "emote") {
-      prefix = "/me " + prefix;
-    }
-
     await this.sendMessage(
       target.holderId as string,
-      prefix,
-      message.plaintextMessage
+      message.message.kolPrefix,
+      message.message.kolMessage
     );
   }
 
@@ -242,12 +231,13 @@ export class KoLClient implements ChatChannel {
       return;
     }
 
+    const name = this.getUsername() ?? "Me the bot";
+
     await this.chatManager.onChat({
       from: channel,
-      formatting: "bot",
-      sender: this.getUsername() ?? "Me the bot",
-      plaintextMessage: message,
-      encoding: "ascii"
+      sender: name,
+      message: formatMessage(name, message, "normal", true, "Internal"),
+      exclusiveTo: "Discord"
     });
   }
 
@@ -931,30 +921,20 @@ export class KoLClient implements ChatChannel {
           }
         }
 
+        let msg = message.msg;
+
+        if (messageType === "emote") {
+          msg = removeKolEmote(sender, msg);
+        }
+
         const previewLinks =
           message.channel != null &&
           KoLClient.privateChannels.includes(message.channel.toLowerCase());
 
-        const plaintextMessage = cleanupKolMessage(
-          sender,
-          message.msg,
-          messageType
-        );
-        const discordMessage = cleanupKolMessage(
-          sender,
-          message.msg,
-          messageType,
-          "discord",
-          previewLinks
-        );
-
         this.chatManager.onChat({
           from: channel,
           sender: sender,
-          plaintextMessage: plaintextMessage,
-          discordMessage: discordMessage,
-          formatting: messageType,
-          encoding: "ascii"
+          message: formatMessage(sender, msg, messageType, previewLinks, "KoL")
         });
       });
     } catch (e) {

@@ -89,7 +89,7 @@ export function cleanupKolMessage(
 
     // Matches <a> tags, individual <b>, <i title=""> tags (opening/closing), and <img> tags
     const combinedRegex =
-      /<a [^>]*href=["'](http[^"']*)["'][^>]*>.*?<\/a>|(<\/?b>)|<\/?i title=['"]([^>]*)['"][^>]*>|<img [^>]*src=["']([^"']*)["'][^>]*\/?>/gi;
+      /<a[^>]*?font-weight:\s*bold[^>]*>(.*?)<\/a>|<a [^>]*href=["'](http[^"']*)["'][^>]*>\s*<font color=blue>\s*\[link\]\s*<\/font>\s*<\/a>|(<\/?b>)|<\/?i title=['"]([^>]*)['"][^>]*>|<img [^>]*src=["']([^"']*)["'][^>]*\/?>/gi;
     let match: RegExpExecArray | null;
 
     while ((match = combinedRegex.exec(msg)) !== null) {
@@ -101,11 +101,20 @@ export function cleanupKolMessage(
         });
       }
 
-      const [fullMatch, linkUrl, bold, italic, imgSrc] = match;
+      const [fullMatch, boldLinkText, fontLinkUrl, bold, italic, imgSrc] =
+        match;
 
-      if (linkUrl) {
-        // Matched an <a> tag
-        segments.push({ type: "link", url: linkUrl });
+      if (boldLinkText) {
+        // Matched a bold <a> tag
+        segments.push({ type: "decoration", content: "**" });
+        segments.push({
+          type: "text",
+          content: stripHtml(boldLinkText, false)
+        });
+        segments.push({ type: "decoration", content: "**" });
+      } else if (fontLinkUrl) {
+        // Matched a <font...>[link]</font> </a> tag
+        segments.push({ type: "link", url: fontLinkUrl });
       } else if (bold) {
         // Matched a <b> or </b> tag
         segments.push({ type: "decoration", content: "**" });

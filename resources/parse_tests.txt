@@ -52,3 +52,8 @@ _**[TortureBot]** :smile\: Test: <3 :) \_\*\*Some discord formatting\*\*\_ \\\||
 {"msg":"&gt;&gt;&gt;q ```code block``` &lt;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;@123456789012345678&gt; &lt;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;#123456789012345678&gt; &lt;:emoji:1234567890&gt;","type":"public","mid":"1561192124","who":{"name":"TortureBot","id":"3495347","color":"black"},"format":"0","channel":"talkie","channelcolor":"green","time":"1758870834"}
 [TortureBot] >>>q ```code block``` <@123456789012345678> <#123456789012345678> <:emoji:1234567890>
 **[TortureBot]** >>>q \`\`\`code block\`\`` \<\@123456789012345678\> \<\#123456789012345678\> \<:emoji\:1234567890\>
+
+
+{"msg":"All bow to <a style=\"font-weight: bold\" target=\"mainpane\" href=\"showplayer.php?who=1014107\">Vuvuzela Virtuoso<\/a>, the reigning Normal King, who knocked out <b>Boesbert<\/b>!","type":"public","mid":"1561194015","who":{"name":"Principal Mooney","id":"-43","color":"#008000"},"format":"0","channel":"pvp","channelcolor":"green","time":"1758876516"}
+[Principal Mooney] All bow to Vuvuzela Virtuoso, the reigning Normal King, who knocked out Boesbert!
+**[Principal Mooney]** All bow to **Vuvuzela Virtuoso**, the reigning Normal King, who knocked out **Boesbert**!

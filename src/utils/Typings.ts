@@ -47,7 +47,7 @@ export type KolKmail = {
   localtime: string; // The local time (as per account settings in kol)
 };
 
-export type ServerSide = "Discord" | "KoL";
+export type ServerSide = "Discord" | "KoL" | "Internal";
 export type KolAccountType = "CLAN" | "PUBLIC" | "IGNORE";
 
 export type ChannelId = {
@@ -75,10 +75,20 @@ export type KolEffect = {
 export interface ChatMessage {
   from: ChannelId;
   sender: string;
-  plaintextMessage: string;
-  discordMessage?: string; // Message to be sent for discord
-  formatting: PublicMessageType | undefined;
-  encoding: BufferEncoding;
+  message: FormattedMessage;
+  exclusiveTo?: ServerSide; // If this should only be sent to one channel side
+}
+
+/**
+ * Returns a formatted message, if embed exists, it can be used for discord instead, if the channel accepts embeds.
+ */
+export interface FormattedMessage {
+  embedTitle: string | undefined; // The embed title, if null, no embed
+  embedColor: number | undefined; // The embed color, if null, no embed
+  embedDescription: string | undefined; // The embed desc, if null, no embed
+  discordMessage: string; // The
+  kolPrefix: string; // The string that is prefixed to KoL messages (when it needs to be split up)
+  kolMessage: string; // The message that is directly sent to all kol receivers
 }
 
 export interface ChatChannel {

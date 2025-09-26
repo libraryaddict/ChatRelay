@@ -2,7 +2,7 @@ import { LoggingTarget } from "@prisma/client";
 import {
   addUpdateLogging,
   getLogging,
-  renameEdits,
+  renameEdits
 } from "../DiscordLoggingDatabase";
 import { CommandInterface, CommandResponse } from "./iCommand";
 import { cleanupKolMessage } from "../../utils/Utils";
@@ -12,7 +12,7 @@ export class CommandEditHook implements CommandInterface {
     return [
       `Call this to edit an existing link, eg to rename: 'edit game_channel name games_channel'`,
       `Only the name can be changed for dm type links, with webhooks you can also change 'target' (new webhook url), 'displayname' (user name to show for webhook) and 'avatar' (user pic to use)`,
-      `Example: 'edit daily_run_channel displayname Daily Run Outcome'`,
+      `Example: 'edit daily_run_channel displayname Daily Run Outcome'`
     ];
   }
 
@@ -28,7 +28,7 @@ export class CommandEditHook implements CommandInterface {
 
     if (match == null) {
       return {
-        message: "Unknown usage of the edit command",
+        message: "Unknown usage of the edit command"
       };
     }
 
@@ -38,7 +38,7 @@ export class CommandEditHook implements CommandInterface {
 
     if (logger == null) {
       return {
-        message: `Unknown link '${match[1]}'`,
+        message: `Unknown link '${match[1]}'`
       };
     }
 
@@ -49,16 +49,16 @@ export class CommandEditHook implements CommandInterface {
     } else if (match[2].toLowerCase() == "avatar") {
       return await this.handleAvatar(
         logger,
-        cleanupKolMessage(null, match[3] ?? "", null)
+        cleanupKolMessage(match[3] ?? "", null)
       );
     } else if (match[2].toLowerCase() == "target") {
       return await this.handleTarget(
         logger,
-        cleanupKolMessage(null, match[3] ?? "", null)
+        cleanupKolMessage(match[3] ?? "", null)
       );
     } else {
       return {
-        message: "Unknown setting '" + match[2] + "'",
+        message: "Unknown setting '" + match[2] + "'"
       };
     }
   }
@@ -70,14 +70,14 @@ export class CommandEditHook implements CommandInterface {
     if (newValue == null || newValue.length == 0) {
       return {
         message:
-          "A new name must be provided, 'default' can also be used to set as default link",
+          "A new name must be provided, 'default' can also be used to set as default link"
       };
     }
 
     if (newValue.match(/[^a-zA-Z\d_\-:]/) != null) {
       return {
         message:
-          "Invalid characters in link name, please use only basic symbols for regex [a-zA-Z0-9_-:]",
+          "Invalid characters in link name, please use only basic symbols for regex [a-zA-Z0-9_-:]"
       };
     }
 
@@ -88,7 +88,7 @@ export class CommandEditHook implements CommandInterface {
     ) {
       return {
         message:
-          "Error! The new link name would conflict with an existing link by the same name",
+          "Error! The new link name would conflict with an existing link by the same name"
       };
     }
 
@@ -100,7 +100,7 @@ export class CommandEditHook implements CommandInterface {
     await renameEdits(logger.player, oldName, logger.identifier);
 
     return {
-      message: `Success! Link ${oldName} has been updated to new name '${logger.identifier}'`,
+      message: `Success! Link ${oldName} has been updated to new name '${logger.identifier}'`
     };
   }
 
@@ -124,7 +124,7 @@ export class CommandEditHook implements CommandInterface {
         message:
           "Illegal webhook received, expected a webhook from discord starting with https://discord.com/api/webhooks/ but instead got " +
           newValue +
-          " - This could be a failure in the bot, may be worth reporting",
+          " - This could be a failure in the bot, may be worth reporting"
       };
     }
 
@@ -135,7 +135,7 @@ export class CommandEditHook implements CommandInterface {
       message:
         "Success! The webhook for '" +
         logger.identifier +
-        "' has successfully changed.",
+        "' has successfully changed."
     };
   }
 
@@ -157,7 +157,7 @@ export class CommandEditHook implements CommandInterface {
     return {
       message: `Success! The displayname on ${logger.identifier} has been ${
         newValue == null ? "removed" : "updated to '" + newValue + "'"
-      }`,
+      }`
     };
   }
 
@@ -180,7 +180,7 @@ export class CommandEditHook implements CommandInterface {
         ) == null
       ) {
         return {
-          message: "Image link failed url validation! Url: " + newValue,
+          message: "Image link failed url validation! Url: " + newValue
         };
       }
     }
@@ -191,7 +191,7 @@ export class CommandEditHook implements CommandInterface {
     return {
       message: `Success! The avatar on ${logger.identifier} has been ${
         newValue == null ? "removed" : "updated to '" + newValue + "'"
-      }`,
+      }`
     };
   }
 }

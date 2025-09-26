@@ -1,5 +1,10 @@
 import { decode, encode } from "html-entities";
-import { KOLMessage, PublicMessageType } from "./Typings";
+import {
+  FormattedMessage,
+  KOLMessage,
+  PublicMessageType,
+  ServerSide
+} from "./Typings";
 
 /**
  * Start KoL's special encoding
@@ -13,7 +18,14 @@ const HEX = "0123456789ABCDEF";
 const originalRollover = 1044847800;
 type MessageSegment =
   | { type: "text"; content: string }
-  | { type: "link"; url: string };
+  | { type: "link"; url: string }
+  | { type: "emoji"; content: string }
+  | { type: "decoration"; content: string };
+const emojiReplacements: Record<string, string> = {
+  "12x12skull.gif": ":skull:",
+  "12x12heart.png": ":heart:",
+  "12x12snowman.gif": ":snowman:"
+};
 
 export function encodeToKolEncoding(x: string): string {
   // The Javascript escape and unescape functions do not correspond
@@ -53,41 +65,70 @@ export function encodeToKolEncoding(x: string): string {
   } // for
 
   return encoded;
-}
+} // Replace special images with emojis
 
 export function cleanupKolMessage(
-  sender: string,
   msg: string,
   messageType: PublicMessageType | undefined,
   outputGoal: "plaintext" | "discord" = "plaintext",
-  allowLinkPreviews = true // Only used on discord
+  allowLinkPreviews = true, // Only used on discord
+  source: ServerSide = "KoL"
 ): string {
   // Strip out zero-width space characters
-  msg = msg.replaceAll(/(&#8203;)|(\u200B)/g, "");
-  // Convert <br> to newlines
-  msg = msg.replaceAll(/<br\/?>/gi, "\n");
+  msg = msg.replaceAll(/&#8203;|&#x200B;|\u200B|\u8203/g, "");
 
   const segments: MessageSegment[] = [];
-  // Finds all <a> and only matches on the href, don't care about anything else in that tag
-  const linkRegex = /<a [^>]*href=["'](http[^"']*)["'][^>]*>.*?(?=<\/a>)/gi;
   let lastIndex = 0;
-  let match: RegExpExecArray | null;
 
-  while ((match = linkRegex.exec(msg)) !== null) {
-    // Add the plain text part that came before this link
-    if (match.index > lastIndex) {
-      segments.push({
-        type: "text",
-        content: stripHtml(msg.substring(lastIndex, match.index), false)
-      });
+  // If html isn't possible, then the <> were sent via the user
+  if (source == "KoL") {
+    // Convert <br> to newlines
+    msg = msg.replaceAll(/<br\/?>/gi, "\n");
+    // Remove all <i title="real text">fake text</i> so they're parsed as text
+    msg = msg.replaceAll(/<i title=["'](.+?)["']>.+?<\/i>/g, "$1");
+
+    // Matches <a> tags, individual <b>, <i title=""> tags (opening/closing), and <img> tags
+    const combinedRegex =
+      /<a [^>]*href=["'](http[^"']*)["'][^>]*>.*?<\/a>|(<\/?b>)|<\/?i title=['"]([^>]*)['"][^>]*>|<img [^>]*src=["']([^"']*)["'][^>]*\/?>/gi;
+    let match: RegExpExecArray | null;
+
+    while ((match = combinedRegex.exec(msg)) !== null) {
+      // Add the plain text part that came before this match
+      if (match.index > lastIndex) {
+        segments.push({
+          type: "text",
+          content: stripHtml(msg.substring(lastIndex, match.index), false)
+        });
+      }
+
+      const [fullMatch, linkUrl, bold, italic, imgSrc] = match;
+
+      if (linkUrl) {
+        // Matched an <a> tag
+        segments.push({ type: "link", url: linkUrl });
+      } else if (bold) {
+        // Matched a <b> or </b> tag
+        segments.push({ type: "decoration", content: "**" });
+      } else if (italic) {
+        // Matched an <i> or </i> tag
+        // Emotes are italic by default
+        if (messageType !== "emote") {
+          segments.push({ type: "decoration", content: "_" });
+        }
+      } else if (imgSrc) {
+        // Matched an <img> tag, check for emoji replacement
+        const filename = imgSrc.split("/").pop() || "";
+        const emoji = emojiReplacements[filename];
+        const content = emoji ? emoji : `(unhandled) ${filename}`;
+
+        segments.push({ type: "emoji", content: content });
+      }
+
+      lastIndex = combinedRegex.lastIndex;
     }
-
-    // Add the link part
-    segments.push({ type: "link", url: match[1] });
-    lastIndex = linkRegex.lastIndex;
   }
 
-  // Add any remaining plain text after the last link
+  // Add any remaining plain text after the last match
   if (lastIndex < msg.length) {
     segments.push({
       type: "text",
@@ -110,11 +151,20 @@ export function cleanupKolMessage(
         // For plain text, strip all HTML.
         const content = decode(segment.content);
 
-        if (outputGoal === "discord") {
+        if (outputGoal === "discord" && source !== "Discord") {
           return escapeSpecialCharacters(content);
         }
 
         return content;
+      } else if (segment.type === "decoration") {
+        if (outputGoal === "discord") {
+          return segment.content;
+        }
+
+        // Non-Discord don't get decorations
+        return "";
+      } else if (segment.type === "emoji") {
+        return segment.content;
       } else {
         // If we do not plan to modify the url displayed
         if (outputGoal === "plaintext" || allowLinkPreviews) {
@@ -126,15 +176,6 @@ export function cleanupKolMessage(
       }
     })
     .join("");
-
-  if (
-    messageType === "emote" &&
-    sender != null &&
-    sender.length > 0 &&
-    processedMsg.startsWith(sender)
-  ) {
-    processedMsg = processedMsg.replace(sender, "");
-  }
 
   // Collapse multiple spaces into a single space
   processedMsg = processedMsg.replaceAll(/ {2,}/g, " ");
@@ -194,25 +235,109 @@ function removeLink(
 }
 
 function escapeSpecialCharacters(text: string): string {
-  // If the goal is discord, allow some common characters and escape the rest
-  // Technically, we can escape .,?!'" but they are common enough that it should never be an issue
-  // Discord seemingly allows us to escape any character that's not a number/letter/space
-  // https://github.com/discord/SimpleAST/blob/master/simpleast-core/src/main/java/com/discord/simpleast/core/simple/SimpleMarkdownRules.kt#L25
-  return text.replaceAll(/([^\da-zA-Z\s\n.,?!'"])/g, "\\$1");
+  // If the goal is discord, we try to escape only the formatting codes that would be used.
+  // Some people do see the escape character as they have formatting turned off. So we want to avoid showing it if it would appear
+  return text
+    .replaceAll(/([\\@#*_])/gm, "\\$1") // Disable backslashes, mentions, channels, bold and italics (We add those ourselves and don't want trouble)
+    .replaceAll(/(\[.*?)(\])/gm, "\\$1\\$2") // Prevent []
+    .replaceAll(/(<.*?)(>)/gm, "\\$1\\$2") // Prevent <>
+    .replaceAll(/([`])(?=.*?\1)/gm, "\\$1") // Formatting codes that requires a closing tag of the same symbol
+    .replaceAll(/(:[^\s]+?)(:)/gim, "$1\\$2") // Prevent :emoji:
+    .replaceAll(/([|~])(?=\1.*?\1\1)/gm, "\\$1") // Formatting codes that require two and a closing (spoiler and strike)
+    .replaceAll(/([\r\n]+)([*>-])/g, "$1\\$2") // Formatting codes that need to be at the start of the line
+    .replaceAll(/([\r\n]+\s*\d+)(\.)/g, "$1\\$2"); // Disable numbered lists
 }
 
-const linkRegex =
-  /(https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&//=]*))/g;
+export function removeKolEmote(sender: string, msg: string): string {
+  const pattern = `^(?:<b>|<i>|<(?:font|a) [^>]*>)+${sender}(?:</b>|</i>|</a>|</font>)+ `;
 
-export function basicSanitization(text: string): string {
-  // Remove all zero length spaces in the message
-  text = text.replaceAll(/\u200B/g, "");
-  // Escape characters
-  text = escapeSpecialCharacters(text);
+  const match = msg.match(new RegExp(pattern, "i"));
 
-  text = text.replaceAll(linkRegex, "<$1>");
+  if (match != null) {
+    msg = msg.substring(match[0].length);
+  }
 
-  return text;
+  return msg;
+}
+
+/**
+ * Converts the message
+ * @param sender
+ * @param message
+ * @param type
+ * @param goal
+ */
+export function formatMessage(
+  sender: string,
+  message: string,
+  type: PublicMessageType,
+  allowLinkPreviews: boolean,
+  source: ServerSide
+): FormattedMessage {
+  const senderName = type === "system" ? "System" : sender;
+
+  const kolMessage = cleanupKolMessage(
+    message,
+    type,
+    "plaintext",
+    allowLinkPreviews,
+    source
+  );
+  let discordMessage = cleanupKolMessage(
+    message,
+    type,
+    "discord",
+    allowLinkPreviews,
+    source
+  );
+
+  let senderNameBrackets = sender;
+
+  if (!sender.startsWith("[") && !sender.endsWith("]")) {
+    senderNameBrackets = `[${senderNameBrackets}]`;
+  }
+
+  let embedTitle: string;
+  let embedColor: number;
+  let embedDesc: string;
+  let kolPrefix: string = senderNameBrackets;
+
+  if (type === "emote") {
+    kolPrefix = `/me ${kolPrefix}`;
+    discordMessage = `_**${senderNameBrackets}** ${discordMessage}_`;
+  } else if (type === "mod announcement") {
+    embedTitle = `Mod Warning by ${senderName}`;
+    embedColor = 0x2ca816;
+    embedDesc = discordMessage;
+
+    discordMessage = `:warning: **${senderNameBrackets}** ${discordMessage}`;
+    kolPrefix = `[Mod Announcement] ${kolPrefix}`;
+  } else if (type === "mod warning") {
+    embedTitle = `Mod Warning by ${senderName}`;
+    embedColor = 0xff0008;
+    embedDesc = discordMessage;
+
+    discordMessage = `:no_entry_sign: **${senderNameBrackets}** ${discordMessage}`;
+    kolPrefix = `[Mod Warning] ${kolPrefix}`;
+  } else if (type === "system") {
+    embedTitle = `System`;
+    embedColor = 0xff0008;
+    embedDesc = discordMessage;
+
+    discordMessage = `:loudspeaker: **${senderNameBrackets}** ${discordMessage}`;
+    kolPrefix = `[System] ${kolPrefix}`;
+  } else {
+    discordMessage = `**${senderNameBrackets}** ${discordMessage}`;
+  }
+
+  return {
+    embedTitle: embedTitle,
+    embedColor: embedColor,
+    embedDescription: embedDesc,
+    discordMessage: discordMessage,
+    kolPrefix: kolPrefix,
+    kolMessage: kolMessage
+  };
 }
 
 export function getBadKolEffects(): string[] {
@@ -307,18 +432,6 @@ export function stripHtml(message: string, shouldTrim: boolean = true): string {
       return stripHtml(newMessage, shouldTrim);
     }
   }
-
-  // Replace special images with emojis
-  const emojiReplacements: Record<string, string> = {
-    "12x12skull.gif": "💀",
-    "12x12heart.png": "❤️",
-    "12x12snowman.gif": "⛄"
-  };
-
-  message = message.replace(
-    /<img[^>]*?(12x12(?:skull\.gif|heart\.png|snowman\.gif))[^>]*>/gi,
-    (_, filename) => emojiReplacements[filename] || ""
-  );
 
   // Remove any remaining HTML tags
   message = message.replace(/<[^>]+>/g, "");

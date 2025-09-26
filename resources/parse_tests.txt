@@ -1,0 +1,54 @@
+
+{"msg":"<b>gizmofinch</b> just thwarted wardeath11!","type":"public","mid":"1533599175","who":{"name":"HMC Radio","id":"-69","color":null},"format":"0","channel":null,"channelcolor":null,"time":"1688375906"}
+[HMC Radio] gizmofinch just thwarted wardeath11!
+**[HMC Radio]** **gizmofinch** just thwarted wardeath11!
+
+
+{"msg":"<b><i><a target=mainpane href=\"showplayer.php?who=3469406\"><font color=\"black\">Irrat</b></font></a> needs to try that path sometime, but he probably won't</i>","type":"public","mid":"1533599516","who":{"name":"Irrat","id":"3469406","color":"black"},"format":"1","channel":"games","channelcolor":"green","time":"1688376786"}
+/me [Irrat] needs to try that path sometime, but he probably won't
+_**[Irrat]** needs to try that path sometime, but he probably won't_
+
+Sender: Marge (#1469700)
+{"msg":"All violent roleplay is verboten, including bot abuse.","type":"public","mid":"1533603237","who":{"name":"Mod Announcement","id":"1469700","color":""},"format":"4","channel":"games","channelcolor":"green","time":"1688393325"}
+[Mod Announcement] [Marge (#1469700)] All violent roleplay is verboten, including bot abuse.
+:warning: **[Marge (#1469700)]** All violent roleplay is verboten, including bot abuse.
+
+
+{"msg":"S<font color=darkred>o</font>metimes I cry h<font color=darkred>a</font>rd<Br>&gt; S<font color=darkred>o</font>metimes I cry h<font color=darkred>o</font>pelessly<Br> T<font color=darkred>o</font>d<font color=darkred>a</font>y, I'm dry eyes","type":"public","mid":"1533606081","who":{"name":"Irrat","id":"3469406","color":"black"},"format":"0","channel":"haiku","channelcolor":"green","time":"1688400641"}    
+[Irrat] Sometimes I cry hard\n> Sometimes I cry hopelessly\n Today, I'm dry eyes
+**[Irrat]** Sometimes I cry hard\n\> Sometimes I cry hopelessly\n Today, I'm dry eyes
+
+
+{"msg":"<a target=_blank href=\"https://averageclan_ignore_this_test_thanks.com/this_is_a_fake_site?yes_really=why_you_no_trust_me\"><font color=blue>[link]</font></a> https:// <font color=darkred>a</font>ver<font color=darkred>a</font>gecl<font color=darkred>a</font>n_ign<font color=darkred>o</font>re_t his_test_th<font color=darkred>a</font>nks.c<font color=darkred>o</font>m/ this_is_<font color=darkred>a</font>_f<font color=darkred>a</font>ke_site? yes_re<font color=darkred>a</font>lly=why_y<font color=darkred>o</font>u_n <font color=darkred>o</font>_trust_me","type":"public","mid":"1533608761","who":{"name":"Irrat","id":"3469406","color":"black"},"format":"0","channel":"clan","channelcolor":"green","time":"1688407142"}
+[Irrat] https://averageclan_ignore_this_test_thanks.com/this_is_a_fake_site?yes_really=why_you_no_trust_me
+**[Irrat]** <https://averageclan_ignore_this_test_thanks.com/this_is_a_fake_site?yes_really=why_you_no_trust_me>
+
+
+{"msg":"it's perfect f<font color=darkred>o<\/font>r K<font color=darkred>o<\/font>L, th<font color=darkred>o<\/font>ugh","type":"public","mid":"1533815421","who":{"name":"Partasah","id":"1482224","color":"black"},"format":"0","channel":"foodcourt","channelcolor":"green","time":"1688869146"}
+[Partasah] it's perfect for KoL, though
+**[Partasah]** it's perfect for KoL, though
+
+
+{"msg":"<font color=darkred>O<\/font>h de<font color=darkred>a<\/font>r, <i title=\"looks\">hisss<\/i> like I'm n<font color=darkred>o<\/font>t <i title=\"handling\">pl<font color=darkred>o<\/font>p<\/i> the html pr<font color=darkred>o<\/font>perly. <i title=\"I\">Pl<font color=darkred>o<\/font>p<\/i> w<font color=darkred>o<\/font>nder if <i title=\"its\"><font color=darkred>b<\/font>uzzs<\/i> rel<font color=darkred>a<\/font>ted t<font color=darkred>o<\/font> <i title=\"my\">sn<font color=darkred>o<\/font>rt<\/i> v<font color=darkred>a<\/font>mpire cl<font color=darkred>o<\/font><font color=darkred>a<\/font>k<!--fb-->","type":"public","mid":"1533815426","who":{"name":"Irrat","id":"3469406","color":"#CC3300"},"format":"0","channel":"clan","channelcolor":"green","time":"1688869149"}
+[Irrat] Oh dear, looks like I'm not handling the html properly. I wonder if its related to my vampire cloak
+**[Irrat]** Oh dear, looks like I'm not handling the html properly. I wonder if its related to my vampire cloak
+
+
+{"msg":"<img src=\"https:\/\/d2uyhvukfffg5a.cloudfront.net\/otherimages\/12x12snowman.gif\" height=\"12\" width=\"12\" \/><font color=blue>aggressive carrot abuse is so cold, she's so cold. So cold cold cold like an ice cream cone.<\/font>","type":"public","mid":"1561191263","who":{"name":"Frosty","id":"-212","color":"black"},"format":"0","channel":"games","channelcolor":"green","time":"1758867455"}
+[Frosty] :snowman:aggressive carrot abuse is so cold, she's so cold. So cold cold cold like an ice cream cone.
+**[Frosty]** :snowman:aggressive carrot abuse is so cold, she's so cold. So cold cold cold like an ice cream cone.
+
+
+{"msg":"<i><b><a target=mainpane href=\"showplayer.php?who=3495347\"><font color=\"black\">TortureBot<\/b><\/font><\/a> :smile: Test: &lt;3 :) _**Some discord formatting**_ \\||spoiler||<\/i>","type":"public","mid":"1561191971","who":{"name":"TortureBot","id":"3495347","color":"black"},"format":"1","channel":"talkie","channelcolor":"green","time":"1758870162"}
+/me [TortureBot] :smile: Test: <3 :) _**Some discord formatting**_ \||spoiler||
+_**[TortureBot]** :smile\: Test: <3 :) \_\*\*Some discord formatting\*\*\_ \\\||spoiler||_
+
+
+{"msg":"**b** *i* _i_ __u__ ~~s~~ ||sp|| `c` &gt;q #h *L 1.L [L](<a target=_blank href=\"http:\/\/a.com\"><font color=blue>[link]<\/font><\/a> http:\/\/a.com) \\*e\\*","type":"public","mid":"1561192115","who":{"name":"TortureBot","id":"3495347","color":"black"},"format":"0","channel":"talkie","channelcolor":"green","time":"1758870829"}
+[TortureBot] **b** *i* _i_ __u__ ~~s~~ ||sp|| `c` >q #h *L 1.L [L](http://a.com) \*e\*
+**[TortureBot]** \*\*b\*\* \*i\* \_i\_ \_\_u\_\_ \~~s~~ \||sp|| \`c` >q \#h \*L 1.L \[L\](<http://a.com>) \\\*e\\\*
+
+
+{"msg":"&gt;&gt;&gt;q ```code block``` &lt;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;@123456789012345678&gt; &lt;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;#123456789012345678&gt; &lt;:emoji:1234567890&gt;","type":"public","mid":"1561192124","who":{"name":"TortureBot","id":"3495347","color":"black"},"format":"0","channel":"talkie","channelcolor":"green","time":"1758870834"}
+[TortureBot] >>>q ```code block``` <@123456789012345678> <#123456789012345678> <:emoji:1234567890>
+**[TortureBot]** >>>q \`\`\`code block\`\`` \<\@123456789012345678\> \<\#123456789012345678\> \<:emoji\:1234567890\>

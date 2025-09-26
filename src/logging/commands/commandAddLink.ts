@@ -19,7 +19,7 @@ export class CommandAddHook implements CommandInterface {
     senderId: string,
     command: string
   ): Promise<CommandResponse | CommandResponse[]> {
-    const match = cleanupKolMessage("", command, "normal").match(
+    const match = cleanupKolMessage(command, "normal").match(
       /add (?:(.{1,32}) )?(webhook|dm)(?: (.+))?$/i
     );
 
@@ -35,7 +35,7 @@ export class CommandAddHook implements CommandInterface {
       if (hookData != null && hookData.length > 0) {
         return {
           message:
-            "Invalid syntax, expected no data for link type to be provided.",
+            "Invalid syntax, expected no data for link type to be provided."
         };
       }
     } else if (hookType == "webhook") {
@@ -50,19 +50,19 @@ export class CommandAddHook implements CommandInterface {
           message:
             "Illegal webhook received, expected a webhook from discord starting with https://discord.com/api/webhooks/ but instead got " +
             hookData +
-            " - This could be a failure in the bot, may be worth reporting",
+            " - This could be a failure in the bot, may be worth reporting"
         };
       }
     } else {
       return {
-        message: `Unknown link type "${hookType}"`,
+        message: `Unknown link type "${hookType}"`
       };
     }
 
     if (identifier.match(/[^a-zA-Z\d_\-:]/) != null) {
       return {
         message:
-          "Invalid characters in link name, please use only basic symbols for regex [a-zA-Z0-9_-:]",
+          "Invalid characters in link name, please use only basic symbols for regex [a-zA-Z0-9_-:]"
       };
     }
 
@@ -75,7 +75,7 @@ export class CommandAddHook implements CommandInterface {
 
     if (existing != null) {
       return {
-        message: `Error! The identifier "${identifier}" is already in use by type of '${existing.target}' with target '${existing.targetData}'! Delete the existing link or edit it!`,
+        message: `Error! The identifier "${identifier}" is already in use by type of '${existing.target}' with target '${existing.targetData}'! Delete the existing link or edit it!`
       };
     }
 
@@ -89,7 +89,7 @@ export class CommandAddHook implements CommandInterface {
       lastUse: 0,
       uses: 0,
       displayname: null,
-      avatar: null,
+      avatar: null
     };
 
     if (hookType == "dm") {
@@ -98,7 +98,7 @@ export class CommandAddHook implements CommandInterface {
       this.loggingHandler.addAuth(code, logging);
 
       return {
-        message: `Success! Just send the code '${code}' to the discord bot and the link will be set up. Expires in 15min`,
+        message: `Success! Just send the code '${code}' to the discord bot and the link will be set up. Expires in 15min`
       };
     }
 

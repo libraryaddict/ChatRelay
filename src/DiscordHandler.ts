@@ -6,11 +6,16 @@ import {
   Partials,
   WebhookClient
 } from "discord.js";
-import { ChannelId, ChatChannel, ChatMessage } from "./utils/Typings";
+import {
+  ChannelId,
+  ChatChannel,
+  ChatMessage,
+  PublicMessageType
+} from "./utils/Typings";
 import { ChatManager } from "./ChatManager";
 import { unemojify } from "node-emoji";
 import { Mutex } from "async-mutex";
-import { basicSanitization } from "./utils/Utils";
+import { formatMessage } from "./utils/Utils";
 
 export class DiscordHandler implements ChatChannel {
   client: Client;
@@ -36,6 +41,11 @@ export class DiscordHandler implements ChatChannel {
     message: ChatMessage,
     withEmbeds: boolean = true
   ) {
+    // If this is exclusive, and it is not for discord
+    if (message.exclusiveTo && message.exclusiveTo != "Discord") {
+      return;
+    }
+
     // A bit ugly eh
     if (
       (target.webhook != null && this.noEmbeds.includes(target.webhook)) ||
@@ -72,71 +82,19 @@ export class DiscordHandler implements ChatChannel {
         return;
       }
 
-      let rawMessage =
-        message.discordMessage || basicSanitization(message.plaintextMessage);
-
-      // Remove any special characteristics from the sender
-      const sender = basicSanitization(message.sender);
-      let senderName = sender;
-
-      if (
-        !senderName.startsWith("[") &&
-        !senderName.endsWith("]") &&
-        message.formatting != "mod announcement" &&
-        message.formatting != "mod warning"
-      ) {
-        senderName = `[${sender}]`;
-      }
-
-      let msg = `**${senderName}** ${rawMessage}`;
+      let msg = ``;
       const embeds: APIEmbed[] = [];
 
-      if (message.formatting == "emote") {
-        // I believe this should always be true, but we check regardless
-        if (
-          rawMessage
-            .trim()
-            .toLowerCase()
-            .startsWith(sender.toLowerCase() + " ")
-        ) {
-          rawMessage = rawMessage.trim().substring(sender.length + 1);
-        }
+      const formatted = message.message;
 
-        msg = `**${senderName}** ${rawMessage}`;
-        msg = `*${msg}*`;
-      } else if (message.formatting == "mod announcement") {
-        if (withEmbeds) {
-          embeds.push({
-            title: "Mod Announcement by " + senderName,
-            color: 0x2ca816,
-            description: rawMessage
-          });
-          msg = ``;
-        } else {
-          msg = `:warning: ${msg}`;
-        }
-      } else if (message.formatting == "mod warning") {
-        if (withEmbeds) {
-          embeds.push({
-            title: "Mod Warning by " + senderName,
-            color: 0xff0008,
-            description: rawMessage
-          });
-          msg = ``;
-        } else {
-          msg = `:no_entry_sign: ${msg}`;
-        }
-      } else if (message.formatting == "system") {
-        if (withEmbeds) {
-          embeds.push({
-            title: "System",
-            color: 0xff0008,
-            description: rawMessage
-          });
-          msg = ``;
-        } else {
-          msg = `:loudspeaker: ${msg}`;
-        }
+      if (withEmbeds && (formatted.embedTitle || formatted.embedDescription)) {
+        embeds.push({
+          title: formatted.embedTitle,
+          color: formatted.embedColor,
+          description: formatted.embedDescription
+        });
+      } else {
+        msg = formatted.discordMessage;
       }
 
       try {
@@ -169,7 +127,7 @@ export class DiscordHandler implements ChatChannel {
         }
       } catch (e) {
         if (
-          withEmbeds &&
+          embeds.length > 0 &&
           e != null &&
           e.toString().includes("Missing Permissions")
         ) {
@@ -247,7 +205,9 @@ export class DiscordHandler implements ChatChannel {
         return;
       }
 
-      const format = msg.match(/^[_*].*[_*]$/) ? "emote" : "normal";
+      const format: PublicMessageType = msg.match(/^[_*].*[_*]$/)
+        ? "emote"
+        : "normal";
 
       if (format == "emote") {
         msg = msg.substring(1, msg.length - 1);
@@ -261,9 +221,7 @@ export class DiscordHandler implements ChatChannel {
         ["“", '"'],
         ["”", '"'],
         ["‘", "'"],
-        ["’", "'"],
-        // eslint-disable-next-line no-irregular-whitespace
-        ["@", "@\u200b"] // Zero width space (​), prevents @everyone from working.
+        ["’", "'"]
       ]) {
         msg = msg.replaceAll(p1, p2);
       }
@@ -274,13 +232,12 @@ export class DiscordHandler implements ChatChannel {
       msg = msg.replaceAll(/<(:[a-zA-Z_]+:)\d+>/g, "$1");
       // Convert all double spaces to single spaces
       msg = msg.replaceAll(/ {2,}/g, " ");
+      const sender = message.member.nickname ?? message.member.displayName;
 
       this.chatManager.onChat({
         from: channelId,
-        sender: message.member.nickname ?? message.member.displayName,
-        plaintextMessage: msg,
-        formatting: format,
-        encoding: "utf-8"
+        sender: sender,
+        message: formatMessage(sender, msg, format, true, "Discord")
       });
     });
   }

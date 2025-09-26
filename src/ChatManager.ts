@@ -6,8 +6,10 @@ import {
   ChannelId,
   ChatChannel,
   ChatMessage,
-  ModeratorName
+  ModeratorName,
+  PublicMessageType
 } from "./utils/Typings";
+import { formatMessage } from "./utils/Utils";
 
 export class ChatManager {
   channels: ChatChannel[] = [];
@@ -149,7 +151,7 @@ export class ChatManager {
     try {
       await chatChannel.sendMessageToChannel(channel, message);
     } catch (e) {
-      console.log(
+      console.error(
         "Error occured when trying to send message to '" +
           channel.uniqueIdentifier +
           "': " +
@@ -170,18 +172,30 @@ export class ChatManager {
     }
 
     if (doResponses && message.from.flags.includes("responses")) {
-      const response = this.getResponse(
-        message.plaintextMessage,
+      let response = this.getResponse(
+        message.message.kolMessage,
         message.sender
       );
 
       if (response != null) {
+        const type: PublicMessageType = response.startsWith("/me ")
+          ? "emote"
+          : "normal";
+
+        if (type == "emote") {
+          response = response.substring("/me ".length);
+        }
+
         const newMessage: ChatMessage = {
           from: message.from,
-          plaintextMessage: response,
-          sender: message.from.owningAccount,
-          formatting: "normal",
-          encoding: "utf8"
+          message: formatMessage(
+            message.from.owningAccount,
+            response,
+            type,
+            true,
+            "Internal"
+          ),
+          sender: message.from.owningAccount
         };
 
         Promise.allSettled(promises).then(() => {

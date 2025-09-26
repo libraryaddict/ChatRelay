@@ -309,7 +309,7 @@ export function formatMessage(
   let embedTitle: string;
   let embedColor: number;
   let embedDesc: string;
-  let kolPrefix: string = sender Name Brackets + " ";
+  let kolPrefix: string = senderNameBrackets + " ";
 
   if (type === "emote") {
     kolPrefix = `/me ${kolPrefix}`;

@@ -95,10 +95,14 @@ export function cleanupKolMessage(
     while ((match = combinedRegex.exec(msg)) !== null) {
       // Add the plain text part that came before this match
       if (match.index > lastIndex) {
-        segments.push({
-          type: "text",
-          content: stripHtml(msg.substring(lastIndex, match.index), false)
-        });
+        const content = stripHtml(msg.substring(lastIndex, match.index), false);
+
+        if (content.length > 0) {
+          segments.push({
+            type: "text",
+            content: content
+          });
+        }
       }
 
       const [fullMatch, boldLinkText, fontLinkUrl, bold, italic, imgSrc] =
@@ -107,10 +111,15 @@ export function cleanupKolMessage(
       if (boldLinkText) {
         // Matched a bold <a> tag
         segments.push({ type: "decoration", content: "**" });
-        segments.push({
-          type: "text",
-          content: stripHtml(boldLinkText, false)
-        });
+        const content = stripHtml(boldLinkText, false);
+
+        if (content.length > 0) {
+          segments.push({
+            type: "text",
+            content: content
+          });
+        }
+
         segments.push({ type: "decoration", content: "**" });
       } else if (fontLinkUrl) {
         // Matched a <font...>[link]</font> </a> tag
@@ -139,10 +148,19 @@ export function cleanupKolMessage(
 
   // Add any remaining plain text after the last match
   if (lastIndex < msg.length) {
-    segments.push({
-      type: "text",
-      content: stripHtml(msg.substring(lastIndex), false)
-    });
+    const content = stripHtml(msg.substring(lastIndex), false);
+
+    if (content.length > 0) {
+      segments.push({
+        type: "text",
+        content: content
+      });
+    }
+  }
+
+  if (source === "KoL") {
+    // Remove messages that are completely in bold, which currently extends to just pirate's bellow
+    removeBellowBold(segments);
   }
 
   // Remove the plaintext links
@@ -190,6 +208,53 @@ export function cleanupKolMessage(
   processedMsg = processedMsg.replaceAll(/ {2,}/g, " ");
 
   return processedMsg.trim();
+}
+
+function removeBellowBold(segments: MessageSegment[]) {
+  const skullOffset = segments.findIndex(
+    (s) => s.type === "emoji" && s.content === ":skull:"
+  );
+
+  // If it is the first segment, or not in
+  // <b>:skull: message :skull:</b> - B tags wrap the skulls
+  if (skullOffset <= 0) {
+    return;
+  }
+
+  // If there are not enough segments
+  if (segments.length <= skullOffset * 2) {
+    return;
+  }
+
+  const firstEmoji = segments[skullOffset];
+  const lastEmoji = segments[segments.length - (skullOffset + 1)];
+
+  // This message starts and ends with skull emoji
+  if (
+    firstEmoji.type != "emoji" ||
+    lastEmoji.type != "emoji" ||
+    firstEmoji.content != ":skull:" ||
+    lastEmoji.content != ":skull:"
+  ) {
+    return;
+  }
+
+  const firstBold = segments[skullOffset - 1];
+  const lastBold = segments[segments.length - skullOffset];
+
+  // If the above emoji was inside bold tags
+  if (
+    firstBold.type != "decoration" ||
+    lastBold.type != "decoration" ||
+    firstBold.content != "**" ||
+    lastBold.content != "**"
+  ) {
+    return;
+  }
+
+  // Remove the first <b> and the last <b>
+  segments.splice(skullOffset - 1, 1);
+  segments.splice(segments.length - skullOffset, 1);
 }
 
 function removeLink(

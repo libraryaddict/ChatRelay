@@ -35,7 +35,7 @@ export function runTests() {
       }
 
       const formatted = formatMessage(sender, msg, type, false, "KoL");
-      const kolMsg = formatted.kolPrefix + " " + formatted.kolMessage;
+      const kolMsg = formatted.kolPrefix + formatted.kolMessage;
 
       if (
         expectedKol === kolMsg &&

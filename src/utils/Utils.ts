@@ -131,7 +131,8 @@ export function cleanupKolMessage(
         // Matched an <i> or </i> tag
         // Emotes are italic by default
         if (messageType !== "emote") {
-          segments.push({ type: "decoration", content: "_" });
+          // We don't use _ as it messes with search
+          segments.push({ type: "decoration", content: "*" });
         }
       } else if (imgSrc) {
         // Matched an <img> tag, check for emoji replacement
@@ -378,7 +379,8 @@ export function formatMessage(
 
   if (type === "emote") {
     kolPrefix = `/me ${kolPrefix}`;
-    discordMessage = `_**${senderNameBrackets}** ${discordMessage}_`;
+    // We use * instead of _ as _ interferes with discord search
+    discordMessage = `***${senderNameBrackets}** ${discordMessage}*`;
   } else if (type === "mod announcement") {
     embedTitle = `Mod Warning by ${senderName}`;
     embedColor = 0x2ca816;

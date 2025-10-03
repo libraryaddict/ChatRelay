@@ -6,7 +6,7 @@
 
 {"msg":"<b><i><a target=mainpane href=\"showplayer.php?who=3469406\"><font color=\"black\">Irrat</b></font></a> needs to try that path sometime, but he probably won't</i>","type":"public","mid":"1533599516","who":{"name":"Irrat","id":"3469406","color":"black"},"format":"1","channel":"games","channelcolor":"green","time":"1688376786"}
 /me [Irrat] needs to try that path sometime, but he probably won't
-_**[Irrat]** needs to try that path sometime, but he probably won't_
+***[Irrat]** needs to try that path sometime, but he probably won't*
 
 Sender: Marge (#1469700)
 {"msg":"All violent roleplay is verboten, including bot abuse.","type":"public","mid":"1533603237","who":{"name":"Mod Announcement","id":"1469700","color":""},"format":"4","channel":"games","channelcolor":"green","time":"1688393325"}
@@ -41,7 +41,7 @@ Sender: Marge (#1469700)
 
 {"msg":"<i><b><a target=mainpane href=\"showplayer.php?who=3495347\"><font color=\"black\">TortureBot<\/b><\/font><\/a> :smile: Test: &lt;3 :) _**Some discord formatting**_ \\||spoiler||<\/i>","type":"public","mid":"1561191971","who":{"name":"TortureBot","id":"3495347","color":"black"},"format":"1","channel":"talkie","channelcolor":"green","time":"1758870162"}
 /me [TortureBot] :smile: Test: <3 :) _**Some discord formatting**_ \||spoiler||
-_**[TortureBot]** :smile\: Test: <3 :) \_\*\*Some discord formatting\*\*\_ \\\||spoiler||_
+***[TortureBot]** :smile\: Test: <3 :) \_\*\*Some discord formatting\*\*\_ \\\||spoiler||*
 
 
 {"msg":"**b** *i* _i_ __u__ ~~s~~ ||sp|| `c` &gt;q #h *L 1.L [L](<a target=_blank href=\"http:\/\/a.com\"><font color=blue>[link]<\/font><\/a> http:\/\/a.com) \\*e\\*","type":"public","mid":"1561192115","who":{"name":"TortureBot","id":"3495347","color":"black"},"format":"0","channel":"talkie","channelcolor":"green","time":"1758870829"}
@@ -66,4 +66,4 @@ _**[TortureBot]** :smile\: Test: <3 :) \_\*\*Some discord formatting\*\*\_ \\\||
 
 {"msg":"<i><b><a target=mainpane href=\"showplayer.php?who=2732184\"><font color=\"black\">Lesbian_Syphilitic_Spanker<\/b><\/font><\/a> <b><img src=\"https:\/\/d2uyhvukfffg5a.cloudfront.net\/otherimages\/12x12skull.gif\" height=\"12\" width=\"12\" \/> it's p<font color=darkred>o<\/font>lishy in n<font color=darkred>o<\/font>ti<font color=darkred>o<\/font>n, she turned her tender eyes t<font color=darkred>o<\/font> me <img src=\"https:\/\/d2uyhvukfffg5a.cloudfront.net\/otherimages\/12x12skull.gif\" height=\"12\" width=\"12\" \/><\/b><\/i>","type":"public","mid":"1561250365","who":{"name":"Lesbian_Syphilitic_Spanker","id":"2732184","color":"black"},"format":"1","channel":"games","channelcolor":"green","time":"1759010110"}
 /me [Lesbian_Syphilitic_Spanker] :skull: it's polishy in notion, she turned her tender eyes to me :skull:
-_**[Lesbian_Syphilitic_Spanker]** :skull: it's polishy in notion, she turned her tender eyes to me :skull:_
+***[Lesbian_Syphilitic_Spanker]** :skull: it's polishy in notion, she turned her tender eyes to me :skull:*

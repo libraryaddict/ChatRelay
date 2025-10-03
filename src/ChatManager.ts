@@ -154,8 +154,8 @@ export class ChatManager {
       console.error(
         "Error occured when trying to send message to '" +
           channel.uniqueIdentifier +
-          "': " +
-          e
+          "': ",
+        e
       );
     }
   }

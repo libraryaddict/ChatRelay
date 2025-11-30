@@ -87,7 +87,7 @@ export class DiscordLoggingHandler {
     this.pendingAuths.push({
       expires: Date.now() + 60 * 15 * 1000,
       code: code,
-      handler: target,
+      handler: target
     });
   }
 
@@ -206,7 +206,7 @@ export class DiscordLoggingHandler {
             (source == "kmail" || response.every((r) => r.enforceKmail == true))
           ) {
             const newResponse: CommandResponse = {
-              message: response.map((r) => r.message).join("\n"),
+              message: response.map((r) => r.message).join("\n")
             };
 
             await this.respond("kmail", fromId, fromName, newResponse);
@@ -221,7 +221,7 @@ export class DiscordLoggingHandler {
       } catch (e) {
         console.log(e);
         await this.respond(source, fromId, fromName, {
-          message: "I'm sorry, I had an error trying to process that.",
+          message: "I'm sorry, I had an error trying to process that."
         });
       }
 
@@ -230,7 +230,7 @@ export class DiscordLoggingHandler {
 
     await this.respond(source, fromId, fromName, {
       message:
-        "I'm sorry, I did not recognize that. Send me 'help' for help or read up at https://github.com/libraryaddict/DiscordChat",
+        "I'm sorry, I did not recognize that. Send me 'help' for help or read up at https://github.com/libraryaddict/DiscordChat"
     });
   }
 

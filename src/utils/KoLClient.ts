@@ -621,6 +621,16 @@ export class KoLClient implements ChatChannel {
 
       const newWhispers: KOLMessage[] = newChatMessagesResponse["msgs"];
 
+      for (const message of newWhispers) {
+        if (!message.msg || typeof message.msg !== "string") {
+          continue;
+        }
+
+        // KoL has taken to sending invisible characters for whatever reason.
+        // Is it to prevent pings in discord? Probably! Either to patch this client, or their own internal use?
+        message.msg = stripInvisibleCharacters(message.msg);
+      }
+
       this.externalMessageProcessor(newWhispers);
 
       return newWhispers;
@@ -865,10 +875,6 @@ export class KoLClient implements ChatChannel {
         ) {
           return;
         }
-
-        // KoL has taken to sending invisible characters for whatever reason.
-        // Is it to prevent pings in discord? Probably! Either to patch this client, or their own internal use?
-        message.msg = stripInvisibleCharacters(message.msg);
 
         if (
           message.who.name.toLowerCase() == this._player?.name.toLowerCase()

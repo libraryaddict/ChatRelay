@@ -74,7 +74,7 @@ export function stripInvisibleCharacters(str: string): string {
   // U+2061-U+2064 (Invisible Operators), U+206A-U+206F (Formatting Inhibitors/Activators),
   // U+00AD (Soft Hyphen), U+061C (Arabic Letter Mark)
   const invisibleCharRegex =
-    /[\u200B-\u200D\uFEFF\u2060\u180E\u2061-\u2064\u206A-\u206F\u00AD\u061C]/g;
+    /&#8203;|&#x200B;|[\u200B-\u200D\uFEFF\u2060\u180E\u2061-\u2064\u206A-\u206F\u00AD\u061C]/g;
 
   return str.replace(invisibleCharRegex, "");
 }

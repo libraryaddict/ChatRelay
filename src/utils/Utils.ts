@@ -67,6 +67,18 @@ export function encodeToKolEncoding(x: string): string {
   return encoded;
 } // Replace special images with emojis
 
+export function stripInvisibleCharacters(str: string): string {
+  // U+200B (Zero Width Space), U+200C (Zero Width Non-Joiner),
+  // U+200D (Zero Width Joiner), U+FEFF (Zero Width No-Break Space / BOM),
+  // U+2060 (Word Joiner), U+180E (Mongolian Vowel Separator),
+  // U+2061-U+2064 (Invisible Operators), U+206A-U+206F (Formatting Inhibitors/Activators),
+  // U+00AD (Soft Hyphen), U+061C (Arabic Letter Mark)
+  const invisibleCharRegex =
+    /[\u200B-\u200D\uFEFF\u2060\u180E\u2061-\u2064\u206A-\u206F\u00AD\u061C]/g;
+
+  return str.replace(invisibleCharRegex, "");
+}
+
 export function cleanupKolMessage(
   msg: string,
   messageType: PublicMessageType | undefined,
@@ -75,7 +87,7 @@ export function cleanupKolMessage(
   source: ServerSide = "KoL"
 ): string {
   // Strip out zero-width space characters
-  msg = msg.replaceAll(/&#8203;|&#x200B;|\u200B|\u8203/g, "");
+  msg = stripInvisibleCharacters(msg);
 
   const segments: MessageSegment[] = [];
   let lastIndex = 0;
@@ -185,7 +197,7 @@ export function cleanupKolMessage(
 
         return content;
       } else if (segment.type === "decoration") {
-        if (outputGoal === "discord") {
+        if (outputGoal !== "plaintext") {
           return segment.content;
         }
 

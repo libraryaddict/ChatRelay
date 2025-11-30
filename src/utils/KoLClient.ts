@@ -20,7 +20,8 @@ import {
   humanReadableTime,
   removeKolEmote,
   splitMessage,
-  stripHtml
+  stripHtml,
+  stripInvisibleCharacters
 } from "./Utils";
 import { ChatManager } from "../ChatManager";
 import { Mutex } from "async-mutex";
@@ -864,6 +865,10 @@ export class KoLClient implements ChatChannel {
         ) {
           return;
         }
+
+        // KoL has taken to sending invisible characters for whatever reason.
+        // Is it to prevent pings in discord? Probably! Either to patch this client, or their own internal use?
+        message.msg = stripInvisibleCharacters(message.msg);
 
         if (
           message.who.name.toLowerCase() == this._player?.name.toLowerCase()

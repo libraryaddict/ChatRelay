@@ -47,7 +47,7 @@ export type KolKmail = {
   localtime: string; // The local time (as per account settings in kol)
 };
 
-export type ServerSide = "Discord" | "KoL" | "Internal";
+export type ServerSide = "Discord" | "KoL" | "Internal" | "Remote";
 export type KolAccountType = "CLAN" | "PUBLIC" | "IGNORE";
 
 export type ChannelId = {

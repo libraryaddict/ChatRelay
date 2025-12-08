@@ -79,6 +79,23 @@ export function stripInvisibleCharacters(str: string): string {
   return str.replace(invisibleCharRegex, "");
 }
 
+export function isRolloverMessage(message: KOLMessage): boolean {
+  return (
+    message.msg &&
+    /^(The system will go down for nightly maintenance in \d+ minutes?|Rollover is over).$/.test(
+      message.msg
+    )
+  );
+}
+
+export function isUpdateMessage(message: KOLMessage) {
+  return (
+    message.type == "system" &&
+    message.msg ==
+      "A new update has been posted. Use the /updates command to read it."
+  );
+}
+
 export function cleanupKolMessage(
   msg: string,
   messageType: PublicMessageType | undefined,
@@ -603,22 +620,6 @@ export function isModMessage(message: KOLMessage): boolean {
     (message.who.name === "Mod Announcement" ||
       message.who?.name === "Mod Warning")
   );
-}
-
-export function isEventMessage(message: KOLMessage): boolean {
-  return message.type === "event";
-}
-
-export function isPrivateMessage(message: KOLMessage): boolean {
-  return message.type === "private";
-}
-
-export function isSystemMessage(message: KOLMessage): boolean {
-  return message.type === "system";
-}
-
-export function isPublicMessage(message: KOLMessage): boolean {
-  return message.type === "public";
 }
 
 export function getPublicMessageType(

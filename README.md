@@ -1,6 +1,6 @@
 # Script (KoL to Discord)
 
-There is a service, `DiscordChat (#3626070)`, that allows you to send messages from *Kingdom of Loathing* to yourself on Discord via DMs and channel webhooks. This is useful for scripts to send you progress updates or alert you to issues. The clientside library for this feature is a separate project: <https://github.com/libraryaddict/KoLDiscordChat>
+There is a service, `DiscordChat (#3626070)`, that allows you to send messages from _Kingdom of Loathing_ to yourself on Discord via DMs and channel webhooks. This is useful for scripts to send you progress updates or alert you to issues. The clientside library for this feature is a separate project: <https://github.com/libraryaddict/KoLDiscordChat>
 This is a one-way transfer, you deliberately cannot send messages from Discord to KoL.
 
 A public Discord server exists primarily to support this service, as a shared server between the user and the bot is required for easy setup of Direct Messages.
@@ -9,8 +9,8 @@ A public Discord server exists primarily to support this service, as a shared se
 
 In addition to script notifications, the public server also uses this repository's software (`ChatRelay`) to provide a read-only feed of in-game chat channels. This allows you to catch up on conversations you missed.
 
-*   **To join the public server,** check the in-game profile of `DiscordChat (#3626070)`.
-*   **To run this chat relay on your own server,** you will need your own bot using the code in this repository. See the introduction below.
+- **To join the public server,** check the in-game profile of `DiscordChat (#3626070)`.
+- **To run this chat relay on your own server,** you will need your own bot using the code in this repository. See the introduction below.
 
 # Github Introduction
 
@@ -57,6 +57,8 @@ The channels has several fields.
 `webhook`: This may change, but is used to post bot messages under different names than just the server nickname
 `listensTo`: This is an array of either group names, or channel IDs that will send their messages to this channel
 `flags`: This currently only has the flag "responses" which is basically autoreplies
+
+The `holderId` can be set to `rollover` which will output rollover messages, or `system` which will output any other system message, including resolving an update to a changelog.
 
 # Reactions.json
 

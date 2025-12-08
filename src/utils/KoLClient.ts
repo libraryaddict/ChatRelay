@@ -16,21 +16,21 @@ import {
   encodeToKolEncoding,
   formatMessage,
   getBadKolEffects,
-  getPublicMessageType,
   humanReadableTime,
-  removeKolEmote,
+  isUpdateMessage,
   splitMessage,
   stripHtml,
   stripInvisibleCharacters
 } from "./Utils";
 import { ChatManager } from "../ChatManager";
 import { Mutex } from "async-mutex";
+import { KolProcessor } from "./KoLProcessor";
 
 axios.defaults.timeout = 30000;
 axios.defaults.httpAgent = new httpAgent({ keepAlive: true });
 axios.defaults.httpsAgent = new httpsAgent({ keepAlive: true });
 
-export class KoLClient implements ChatChannel {
+export class KoLClient extends KolProcessor implements ChatChannel {
   private channels: ChannelId[];
   private _loginParameters;
   private _credentials?: KOLCredentials;
@@ -49,7 +49,6 @@ export class KoLClient implements ChatChannel {
   private chatManager: ChatManager;
   private accountType: KolAccountType;
   private mutex = new Mutex();
-  private messageProcessingMutex = new Mutex();
   private lastAntidoteBeg = 0;
   private lastStatusCheck = 0;
   private fortuneTeller: "UNTESTED" | "EXISTS" | "DOESNT EXIST" = "UNTESTED";
@@ -62,6 +61,8 @@ export class KoLClient implements ChatChannel {
     password: string,
     type: KolAccountType
   ) {
+    super();
+
     this.channels = channelIds;
     this.chatManager = chatManager;
     this.accountType = type;
@@ -77,6 +78,10 @@ export class KoLClient implements ChatChannel {
     if (!this.channels) {
       return;
     }
+  }
+
+  getChatManager(): ChatManager {
+    return this.chatManager;
   }
 
   async doStatusCheck() {
@@ -151,6 +156,10 @@ export class KoLClient implements ChatChannel {
     return channels;
   }
 
+  getChatChannels(): ChannelId[] {
+    return this.channels;
+  }
+
   async getChannels(): Promise<string[]> {
     const response = (
       await this.visitUrl("submitnewchat.php", {
@@ -221,6 +230,35 @@ export class KoLClient implements ChatChannel {
     }
 
     return effects;
+  }
+
+  shouldSkip(message: KOLMessage): boolean {
+    return message.who.name.toLowerCase() == this._player?.name.toLowerCase();
+  }
+
+  async processExtra(message: KOLMessage): Promise<void> {
+    if (message.type == "event" && message.msg?.includes("<!--refresh-->")) {
+      this.sendBotMessage(stripHtml(message.msg));
+      await this.removeBadEffects();
+    }
+
+    if (
+      message.type == "event" &&
+      message.msg?.includes("href='clan_viplounge.php?preaction")
+    ) {
+      await this.checkFortuneTeller();
+    }
+
+    // If its a generic update message
+    if (isUpdateMessage(message)) {
+      // Get the updates
+      const updates = await this.getTrivialUpdates();
+
+      // If at least one message, update the string
+      if (updates.length > 0) {
+        message.msg = updates[0];
+      }
+    }
   }
 
   async sendBotMessage(message: string) {
@@ -649,7 +687,9 @@ export class KoLClient implements ChatChannel {
   }
 
   async doInitialChannelJoining(): Promise<void> {
-    const listenTo = this.channels.map((c) => c.holderId);
+    const listenTo = this.channels
+      .map((c) => c.holderId)
+      .filter((s) => !KolProcessor.syntheticChannels.includes(s));
 
     if (this.accountType == "CLAN") {
       await this.useChatMacro("/channel clan");
@@ -732,7 +772,15 @@ export class KoLClient implements ChatChannel {
       return undefined;
     }
 
-    return match[1];
+    const modName = match[1];
+
+    if (modName != null) {
+      const mods = this.chatManager.getModeratorNames();
+      mods.push({ id: id, name: modName });
+      this.chatManager.setModeratorNames(mods);
+    }
+
+    return modName;
   }
 
   async getKmails(): Promise<KolKmail[]> {
@@ -815,6 +863,25 @@ export class KoLClient implements ChatChannel {
     await Promise.allSettled(promises);
   }
 
+  async getTrivialUpdates(): Promise<string[]> {
+    const response = (
+      await this.visitUrl("submitnewchat.php", {
+        graf: `/clan /updates`,
+        j: 1
+      })
+    )["output"] as string;
+
+    if (!response) {
+      return null;
+    }
+
+    return [
+      ...(response.matchAll(
+        /<b>[A-za-z]+ \d+<\/b> - (.*?)(?=(?:<br>(?:<hr>|<b>[A-za-z]+ \d+<\/b> - )))/g
+      ) ?? [])
+    ].map((m) => m[1]);
+  }
+
   async processMessage(): Promise<void> {
     const message = this.messages.shift();
 
@@ -829,130 +896,7 @@ export class KoLClient implements ChatChannel {
       return;
     }
 
-    try {
-      this.messageProcessingMutex.runExclusive(async () => {
-        // pvp radio
-        if (message != null && message.who != null && message.who.id == "-69") {
-          return;
-        }
-
-        // console.log("Received kol message: " + JSON.stringify(message));
-        //  {"msg":"<b>gizmofinch</b> just thwarted wardeath11!","type":"public","mid":"1533599175","who":{"name":"HMC Radio","id":"-69","color":null},"format":"0","channel":null,"channelcolor":null,"time":"1688375906"}
-
-        //{"msg":"<b><i><a target=mainpane href=\"showplayer.php?who=3469406\"><font color=\"black\">Irrat</b></font></a> needs to try that path sometime, but he probably won't</i>","type":"public","mid":"1533599516","who":{"name":"Irrat","id":"3469406","color":"black"},"format":"1","channel":"games","channelcolor":"green","time":"1688376786"}
-
-        //Received kol message: {"msg":"All violent roleplay is verboten, including bot abuse.","type":"public","mid":"1533603237","who":{"name":"Mod Announcement","id":"1469700","color":""},"format":"4","channel":"games","channelcolor":"green","time":"1688393325"}
-
-        // {"msg":"S<font color=darkred>o</font>metimes I cry h<font color=darkred>a</font>rd<Br> S<font color=darkred>o</font>metimes I cry h<font color=darkred>o</font>pelessly<Br> T<font color=darkred>o</font>d<font color=darkred>a</font>y, I'm dry eyes","type":"public","mid":"1533606081","who":{"name":"Irrat","id":"3469406","color":"black"},"format":"0","channel":"haiku","channelcolor":"green","time":"1688400641"}
-
-        // {"msg":"<a target=_blank href=\"https://averageclan_ignore_this_test_thanks.com/this_is_a_fake_site?yes_really=why_you_no_trust_me\"><font color=blue>[link]</font></a> https:// <font color=darkred>a</font>ver<font color=darkred>a</font>gecl<font color=darkred>a</font>n_ign<font color=darkred>o</font>re_t his_test_th<font color=darkred>a</font>nks.c<font color=darkred>o</font>m/ this_is_<font color=darkred>a</font>_f<font color=darkred>a</font>ke_site? yes_re<font color=darkred>a</font>lly=why_y<font color=darkred>o</font>u_n <font color=darkred>o</font>_trust_me","type":"public","mid":"1533608761","who":{"name":"Irrat","id":"3469406","color":"black"},"format":"0","channel":"clan","channelcolor":"green","time":"1688407142"}
-
-        // {"msgs":[{"msg":"it's perfect f<font color=darkred>o<\/font>r K<font color=darkred>o<\/font>L, th<font color=darkred>o<\/font>ugh","type":"public","mid":"1533815421","who":{"name":"Partasah","id":"1482224","color":"black"},"format":"0","channel":"foodcourt","channelcolor":"green","time":"1688869146"},{"msg":"<font color=darkred>O<\/font>h de<font color=darkred>a<\/font>r, <i title=\"looks\">hisss<\/i> like I'm n<font color=darkred>o<\/font>t <i title=\"handling\">pl<font color=darkred>o<\/font>p<\/i> the html pr<font color=darkred>o<\/font>perly. <i title=\"I\">Pl<font color=darkred>o<\/font>p<\/i> w<font color=darkred>o<\/font>nder if <i title=\"its\"><font color=darkred>b<\/font>uzzs<\/i> rel<font color=darkred>a<\/font>ted t<font color=darkred>o<\/font> <i title=\"my\">sn<font color=darkred>o<\/font>rt<\/i> v<font color=darkred>a<\/font>mpire cl<font color=darkred>o<\/font><font color=darkred>a<\/font>k<!--fb-->","type":"public","mid":"1533815426","who":{"name":"Irrat","id":"3469406","color":"#CC3300"},"format":"0","channel":"clan","channelcolor":"green","time":"1688869149"}],"last":"1533815426","delay":3000}
-
-        // {"msgs":[{"type":"event","msg":"<a href='showplayer.php?who=3469406' target=mainpane class=nounder style='color: green'>Irrat<\/a> has hit you with a cartoon harpoon!<!--refresh-->","link":false,"time":"1690528121"}],"last":"1534646135","delay":3000}
-
-        // {"msgs":[{"type":"event","msg":"You have been invited to <a style='color: green' target='mainpane' href='clan_viplounge.php?preaction=testlove&testlove=3257284'>consult Madame Zatara about your relationship<\/a> with Rosemary Gulasch.","link":false,"time":"1692188076"}],"last":"1535503834","delay":3000}
-
-        if (
-          message.type == "event" &&
-          message.msg?.includes("<!--refresh-->")
-        ) {
-          this.sendBotMessage(stripHtml(message.msg));
-          await this.removeBadEffects();
-        }
-
-        if (
-          message.type == "event" &&
-          message.msg?.includes("href='clan_viplounge.php?preaction")
-        ) {
-          await this.checkFortuneTeller();
-        }
-
-        if (
-          message.who == null ||
-          message.channel == null ||
-          message.msg == null
-        ) {
-          return;
-        }
-
-        if (
-          message.who.name.toLowerCase() == this._player?.name.toLowerCase()
-        ) {
-          return;
-        }
-
-        const channel = this.channels.find(
-          (c) => c.holderId == message.channel
-        );
-
-        if (channel == null) {
-          return;
-        }
-
-        let sender = stripHtml(message.who.name);
-
-        if (this.chatManager.ignoredChatRelays.includes(sender.toLowerCase())) {
-          return;
-        }
-
-        const messageType = getPublicMessageType(message);
-
-        if (messageType == "event") {
-          return;
-        }
-
-        if (
-          message.who.id &&
-          (messageType == "mod announcement" || messageType == "mod warning")
-        ) {
-          const mods = this.chatManager.getModeratorNames();
-
-          let name = mods.find((m) => m.id == message.who?.id);
-
-          if (name == null && message.who.id.match(/^\d+$/)) {
-            const modName = await this.lookupName(message.who.id);
-
-            if (modName != null) {
-              name = {
-                id: message.who.id,
-                name: modName
-              };
-
-              mods.push(name);
-            }
-
-            this.chatManager.setModeratorNames(mods);
-          }
-
-          if (name != null) {
-            sender = `${name.name} (#${name.id})`;
-          } else {
-            sender = "#" + message.who.id;
-          }
-        }
-
-        let msg = message.msg;
-
-        if (messageType === "emote") {
-          msg = removeKolEmote(sender, msg);
-        }
-
-        const previewLinks =
-          message.channel != null &&
-          KoLClient.privateChannels.includes(message.channel.toLowerCase());
-
-        this.chatManager.onChat({
-          from: channel,
-          sender: sender,
-          message: formatMessage(sender, msg, messageType, previewLinks, "KoL")
-        });
-      });
-    } catch (e) {
-      console.log("ERROR: " + e);
-    } finally {
-      this.processMessage();
-    }
+    await this.processKolMessage(message);
   }
 
   async start(): Promise<void> {

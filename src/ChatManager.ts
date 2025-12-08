@@ -2,6 +2,7 @@ import { DiscordHandler } from "./DiscordHandler";
 import { DiscordLoggingHandler } from "./logging/DiscordLoggingHandler";
 import { Settings } from "./Settings";
 import { KoLClient } from "./utils/KoLClient";
+import { RemoteKolClient } from "./utils/RemoteKoLClient";
 import {
   ChannelId,
   ChatChannel,
@@ -94,11 +95,23 @@ export class ChatManager {
     }
 
     for (const name of accounts.keys()) {
+      if (!name.startsWith("https:")) {
+        continue;
+      }
+
+      const account = new RemoteKolClient(this, accounts.get(name), name);
+
+      accounts.delete(name);
+
+      this.channels.push(account);
+    }
+
+    for (const name of accounts.keys()) {
       if (name.toLowerCase() == "discord") {
         continue;
       }
 
-      console.log("No kol account found for " + name);
+      console.log("No account found for " + name);
     }
 
     const startups: Promise<void>[] = [];

@@ -5,7 +5,6 @@ import {
   renameEdits
 } from "../DiscordLoggingDatabase";
 import { CommandInterface, CommandResponse } from "./iCommand";
-import { cleanupKolMessage } from "../../utils/Utils";
 
 export class CommandEditHook implements CommandInterface {
   getHelp(shortForm: boolean): string | string[] {
@@ -47,15 +46,9 @@ export class CommandEditHook implements CommandInterface {
     } else if (match[2].toLowerCase() == "displayname") {
       return await this.handleDisplayname(logger, match[3]);
     } else if (match[2].toLowerCase() == "avatar") {
-      return await this.handleAvatar(
-        logger,
-        cleanupKolMessage(match[3] ?? "", null)
-      );
+      return await this.handleAvatar(logger, match[3] ?? "");
     } else if (match[2].toLowerCase() == "target") {
-      return await this.handleTarget(
-        logger,
-        cleanupKolMessage(match[3] ?? "", null)
-      );
+      return await this.handleTarget(logger, match[3] ?? "");
     } else {
       return {
         message: "Unknown setting '" + match[2] + "'"

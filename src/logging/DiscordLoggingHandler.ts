@@ -11,8 +11,8 @@ import { CommandEditHook } from "./commands/commandEditLink";
 import { CommandList } from "./commands/commandList";
 import { CommandRunLog } from "./commands/commandRunLink";
 import { Mutex } from "async-mutex";
-import { decode } from "html-entities";
 import { CommandHelp } from "./commands/commandHelp";
+import { cleanupKolMessage } from "../utils/Utils";
 
 export type MessageSource = "kmail" | "whisper";
 
@@ -162,7 +162,6 @@ export class DiscordLoggingHandler {
       ) {
         continue;
       } else {
-        console.log("Received DM from " + message.who.name);
         const respondKmail = message.msg.startsWith("kmail.");
 
         if (respondKmail) {
@@ -185,7 +184,9 @@ export class DiscordLoggingHandler {
     fromName: string,
     message: string
   ) {
-    message = decode(message);
+    message = cleanupKolMessage(message, "normal", "plaintext", true, "KoL");
+
+    console.log(`Received ${source} from ${fromName} (#${fromId})`);
 
     for (const command of this.commands) {
       if (!command.isCommand(message)) {

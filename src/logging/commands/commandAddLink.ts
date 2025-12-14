@@ -1,14 +1,14 @@
 import { LoggingTarget } from "@prisma/client";
 import { addUpdateLogging, getLogging } from "../DiscordLoggingDatabase";
 import { CommandInterface, CommandResponse } from "./iCommand";
-import { cleanupKolMessage, getKolDay } from "../../utils/Utils";
+import { getKolDay } from "../../utils/Utils";
 import { DiscordLoggingHandler } from "../DiscordLoggingHandler";
 
 export class CommandAddHook implements CommandInterface {
   constructor(private loggingHandler: DiscordLoggingHandler) {}
 
   getHelp(shortForm: boolean): string {
-    return `Use 'add <name (optional)> <'webhook' or 'dm'> <webhook if selected> to add a logging link. Eg, 'add webhook www.discordwebhook.com' or 'add msg_via_discord dm'`;
+    return `Use 'add (optional_name) <'webhook' or 'dm'> <webhook if selected> to add a logging link. Eg, 'add webhook www.discordwebhook.com' or 'add msg_via_discord dm'`;
   }
 
   isCommand(message: string): boolean {
@@ -19,9 +19,7 @@ export class CommandAddHook implements CommandInterface {
     senderId: string,
     command: string
   ): Promise<CommandResponse | CommandResponse[]> {
-    const match = cleanupKolMessage(command, "normal").match(
-      /add (?:(.{1,32}) )?(webhook|dm)(?: (.+))?$/i
-    );
+    const match = command.match(/add (?:(.{1,32}) )?(webhook|dm)(?: (.+))?$/i);
 
     if (match == null) {
       return { message: "Invalid syntax, was an invalid link type provided?" };

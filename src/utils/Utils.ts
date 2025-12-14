@@ -654,3 +654,14 @@ export function getKolDay(time: number = Math.round(Date.now() / 1000)) {
 
   return Math.floor(daysSince);
 }
+
+const secondsInDay = 24 * 60 * 60;
+
+export function getSecondsElapsedInDay(
+  time: number = Math.round(Date.now() / 1000)
+) {
+  const secondsSinceOriginalTime = time - originalRollover;
+  const secondsElapsedInDay = secondsSinceOriginalTime % secondsInDay;
+
+  return secondsElapsedInDay;
+}

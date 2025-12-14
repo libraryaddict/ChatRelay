@@ -16,6 +16,7 @@ import {
   encodeToKolEncoding,
   formatMessage,
   getBadKolEffects,
+  getSecondsElapsedInDay,
   humanReadableTime,
   isUpdateMessage,
   splitMessage,
@@ -52,6 +53,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
   private lastAntidoteBeg = 0;
   private lastStatusCheck = 0;
   private fortuneTeller: "UNTESTED" | "EXISTS" | "DOESNT EXIST" = "UNTESTED";
+  private newlyStarted = true;
   externalMessageProcessor: (messages: KOLMessage[]) => void = () => {};
 
   constructor(
@@ -407,22 +409,30 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       this._credentials = undefined;
 
       try {
-        this._isRollover =
+        const rollover =
           /The system is currently down for nightly maintenance/.test(
             (await axios("https://www.kingdomofloathing.com/")).data
           );
 
-        if (this._isRollover) {
-          console.log(
-            "Rollover appears to be in progress. Checking again in one minute."
-          );
+        // Only one message per rollover
+        if (!this._isRollover && rollover) {
+          console.log("Rollover appears to be in progress.");
         }
+
+        this._isRollover = rollover;
       } catch (e) {
         this._isRollover = true;
-        console.log(
-          "Login failed.. Rollover? Checking again in one minute.",
-          e
-        );
+
+        // If we're not in the rollover phase, then print a spammy message
+        if (
+          getSecondsElapsedInDay() >= 15 * 60 &&
+          getSecondsElapsedInDay() < 24 * 60 * 60 - 180
+        ) {
+          console.log(
+            "Login failed.. Rollover? Checking again in one minute.",
+            e
+          );
+        }
       }
 
       if (this._isRollover) {
@@ -714,9 +724,12 @@ export class KoLClient extends KolProcessor implements ChatChannel {
         }
 
         if (listeningTo.includes(channel)) {
-          console.log(
-            `${this.getUsername()} already listening to "${channel}"`
-          );
+          if (this.newlyStarted) {
+            console.log(
+              `${this.getUsername()} already listening to "${channel}"`
+            );
+          }
+
           continue;
         }
 
@@ -729,9 +742,12 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
       for (const channel of hasChannels) {
         if (listeningTo.includes(channel) && listenTo.includes(channel)) {
-          console.log(
-            `${this.getUsername()} already listening to "${channel}"`
-          );
+          if (this.newlyStarted) {
+            console.log(
+              `${this.getUsername()} already listening to "${channel}"`
+            );
+          }
+
           continue;
         }
 
@@ -756,6 +772,8 @@ export class KoLClient extends KolProcessor implements ChatChannel {
         await this.useChatMacro("/listen " + channel);
       }
     }
+
+    this.newlyStarted = false;
   }
 
   async lookupName(id: string): Promise<string | undefined> {

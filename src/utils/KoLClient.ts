@@ -345,18 +345,15 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       return map;
     }
 
-    for (const key of Object.keys(apiResponse)) {
-      const value = apiResponse[key];
+    for (const [rawKey, rawValue] of Object.entries(apiResponse)) {
+      const key = Number(rawKey);
+      const value = Number(rawValue);
 
-      if (
-        typeof value != "string" ||
-        !/^\d+$/.test(key) ||
-        !/^\d+$/.test(value)
-      ) {
+      if (!Number.isInteger(key) || !Number.isInteger(value)) {
         continue;
       }
 
-      map.set(parseInt(key), parseInt(value));
+      map.set(key, value);
     }
 
     return map;

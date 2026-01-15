@@ -897,7 +897,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
     return [
       ...(response.matchAll(
-        /<b>[A-za-z]+ \d+<\/b> - (.*?)(?=(?:<br>(?:<hr>|<b>[A-za-z]+ \d+<\/b> - )))/g
+        /<b>[a-z]+ \d+<\/b> - (.*?)(?=(?:<(?:p|br)>(?:<hr>|<b>[a-z]+ \d+<\/b> - )))/gi
       ) ?? [])
     ].map((m) => m[1]);
   }

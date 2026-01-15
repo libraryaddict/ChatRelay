@@ -89,10 +89,12 @@ export function isRolloverMessage(message: KOLMessage): boolean {
 }
 
 export function isUpdateMessage(message: KOLMessage) {
+  // [System Message] A new announcement has been posted. Use the /updates command to read it.
   return (
     message.type == "system" &&
-    message.msg ==
-      "A new update has been posted. Use the /updates command to read it."
+    /Use the \/updates command to read it./.test(message.msg)
+    //    message.msg ==
+    //s    "A new update has been posted. Use the /updates command to read it."
   );
 }
 

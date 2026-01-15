@@ -18,6 +18,7 @@ import {
   getBadKolEffects,
   getSecondsElapsedInDay,
   humanReadableTime,
+  isReplaceableUpdateMessage,
   isUpdateMessage,
   splitMessage,
   stripHtml,
@@ -258,7 +259,11 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
       // If at least one message, update the string
       if (updates.length > 0) {
-        message.msg = updates[0];
+        if (isReplaceableUpdateMessage(message)) {
+          message.msg = updates[0];
+        } else {
+          message.msg = `${message.msg} || ${updates[0]}`;
+        }
       }
     }
   }

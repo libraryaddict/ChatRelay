@@ -88,13 +88,24 @@ export function isRolloverMessage(message: KOLMessage): boolean {
   );
 }
 
+export function isReplaceableUpdateMessage(message: KOLMessage) {
+  return (
+    message.type == "system" &&
+    message.msg &&
+    /A new [a-z]+ has been posted. Use the \/updates command to read it./is.test(
+      message.msg
+    )
+  );
+}
+
 export function isUpdateMessage(message: KOLMessage) {
   // [System Message] A new announcement has been posted. Use the /updates command to read it.
   return (
     message.type == "system" &&
+    message.msg &&
     /Use the \/updates command to read it./.test(message.msg)
     //    message.msg ==
-    //s    "A new update has been posted. Use the /updates command to read it."
+    //    "A new update has been posted. Use the /updates command to read it."
   );
 }
 

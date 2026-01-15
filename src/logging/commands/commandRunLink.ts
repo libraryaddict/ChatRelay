@@ -3,8 +3,9 @@ import { getKolDay } from "../../utils/Utils";
 import { addUpdateEdit, getEdit, getLogging } from "../DiscordLoggingDatabase";
 import { CommandInterface, CommandResponse } from "./iCommand";
 import { postToWebhook, WebhookData } from "../WebhookManager";
-import { DiscordLoggingHandler } from "../DiscordLoggingHandler";
+import { DiscordLoggingHandler, ErrorResponse } from "../DiscordLoggingHandler";
 import { APIEmbed, BaseMessageOptions } from "discord.js";
+import axios from "axios";
 
 interface DiscordAction {
   id?: string;
@@ -43,7 +44,7 @@ export class CommandRunLog implements CommandInterface {
       title: regex[4],
       status: status,
       color: color,
-      editId: regex[3],
+      editId: regex[3]
     };
   }
 
@@ -77,7 +78,7 @@ export class CommandRunLog implements CommandInterface {
       }
 
       return {
-        message: `Unable to find any logging target by the name '${targetId}'`,
+        message: `Unable to find any logging target by the name '${targetId}'`
       };
     }
 
@@ -106,6 +107,7 @@ export class CommandRunLog implements CommandInterface {
       message: messageParam,
       avatar: logging.avatar,
       name: logging.displayname,
+      errorOnRateLimit: true
     };
 
     const matches = messageParam.match(/<@(&?)?(\d{18,})>/g);
@@ -146,7 +148,17 @@ export class CommandRunLog implements CommandInterface {
     if (logging.target == "dm") {
       res = await this.postToDiscord(logging, data);
     } else if (logging.target == "webhook") {
-      res = await postToWebhook(data);
+      try {
+        res = await postToWebhook(data);
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 429) {
+          throw new ErrorResponse(
+            `Webhook hit rate limit, please try to keep it at 5 messages per 2 seconds (at most)`
+          );
+        }
+
+        throw error;
+      }
     } else {
       return { message: "I'm sorry, an invalid hook type was provided" };
     }
@@ -160,7 +172,7 @@ export class CommandRunLog implements CommandInterface {
           identifier: res,
           created: getKolDay(),
           lastUse: getKolDay(),
-          melting: true,
+          melting: true
         };
 
         await addUpdateEdit(editSetting);
@@ -401,7 +413,7 @@ export class CommandRunLog implements CommandInterface {
       grey: "808080",
       lightgray: "d3d3d3",
       lightslategrey: "778899",
-      slategrey: "708090",
+      slategrey: "708090"
     };
 
     return (colours as any)[colour.toLowerCase()];

@@ -16,6 +16,13 @@ import { cleanupKolMessage } from "../utils/Utils";
 
 export type MessageSource = "kmail" | "whisper";
 
+export class ErrorResponse extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ErrorResponse";
+  }
+}
+
 export interface PendingDiscordAuth {
   expires: number;
   code: string;
@@ -220,10 +227,18 @@ export class DiscordLoggingHandler {
           await this.respond(source, fromId, fromName, response);
         }
       } catch (e) {
-        console.log(e);
-        await this.respond(source, fromId, fromName, {
-          message: "I'm sorry, I had an error trying to process that."
-        });
+        if (e instanceof ErrorResponse) {
+          console.log(`Hit error with ${fromName} (#${fromId}) - ${e.message}`);
+
+          await this.respond(source, fromId, fromName, {
+            message: e.message
+          });
+        } else {
+          console.log(e);
+          await this.respond(source, fromId, fromName, {
+            message: "I'm sorry, I had an error trying to process that."
+          });
+        }
       }
 
       return;

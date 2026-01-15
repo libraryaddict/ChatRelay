@@ -18,6 +18,7 @@ import {
   getBadKolEffects,
   getSecondsElapsedInDay,
   humanReadableTime,
+  isReplaceableUpdateMessage,
   isUpdateMessage,
   splitMessage,
   stripHtml,
@@ -258,7 +259,11 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
       // If at least one message, update the string
       if (updates.length > 0) {
-        message.msg = updates[0];
+        if (isReplaceableUpdateMessage(message)) {
+          message.msg = updates[0];
+        } else {
+          message.msg = `${message.msg} || ${updates[0]}`;
+        }
       }
     }
   }
@@ -345,18 +350,15 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       return map;
     }
 
-    for (const key of Object.keys(apiResponse)) {
-      const value = apiResponse[key];
+    for (const [rawKey, rawValue] of Object.entries(apiResponse)) {
+      const key = Number(rawKey);
+      const value = Number(rawValue);
 
-      if (
-        typeof value != "string" ||
-        !/^\d+$/.test(key) ||
-        !/^\d+$/.test(value)
-      ) {
+      if (!Number.isInteger(key) || !Number.isInteger(value)) {
         continue;
       }
 
-      map.set(parseInt(key), parseInt(value));
+      map.set(key, value);
     }
 
     return map;

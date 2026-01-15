@@ -12,40 +12,114 @@ interface DiscordAction {
   title?: string;
   status: string;
   color?: string;
-  editId?: string;
+  edit?: string;
 }
+const params = [
+  {
+    key: "ID",
+    // regex pattern for the value.
+    valuePattern: /[^ ]+/
+  },
+  {
+    displayName: "Color",
+    valuePattern: /[a-zA-Z\d]{1,18}/
+  },
+  {
+    displayName: "Edit",
+    valuePattern: /[^ ]+/
+  }
+];
 
 export class CommandRunLog implements CommandInterface {
   constructor(private discord: DiscordLoggingHandler) {}
 
-  getAction(message: string): DiscordAction | null {
-    const regex = message.match(
-      /^(?:ID: ([^ ]+) )?(?:Color: ([a-zA-Z\d]{1,18}) )?(?:Edit: ([^ ]+) )?(?:Title: (.+) )?Status: (.+)$/s
-    );
+  public getAction(message: string): DiscordAction | null {
+    // Get status
+    const statusMatch = message.match(/^(.*?)Status:\s*(.*)$/s);
 
-    if (regex == null) {
+    if (!statusMatch) {
       return null;
     }
 
-    let color = regex[2];
+    let remainingText = statusMatch[1];
+    const status = statusMatch[2].replaceAll(/\\n/g, "\n").trim();
+    const action: Partial<DiscordAction> = { status };
 
-    if (color != null && color.length > 0) {
-      color = this.colourNameToHex(color) ?? color;
+    // Get title
+    const titleMatch = remainingText.match(/Title:\s*(.*)/s);
+
+    if (titleMatch) {
+      action.title = titleMatch[1].trim();
+      remainingText = remainingText.replace(titleMatch[0], "");
     }
 
-    let status = regex[5];
+    // Get params from original message
+    for (const param of params) {
+      // build regex to find the "Key: Value"
+      const findRegex = new RegExp(
+        `${param.key}:\\s*(${param.valuePattern.source})\\s*`
+      );
+      const match = remainingText.match(findRegex);
 
-    while (status.includes("\\n")) {
-      status = status.replace("\\n", "\n");
+      if (match) {
+        action[param.key.toLowerCase()] = match[1];
+        remainingText = remainingText.replace(match[0], "");
+      }
     }
 
-    return {
-      id: regex[1],
-      title: regex[4],
-      status: status,
-      color: color,
-      editId: regex[3]
-    };
+    // If remaining text, then the entire string contains invalid nonsense
+    if (remainingText.trim() != "") {
+      return null;
+    }
+
+    // Extract missing params from title
+    if (action.title) {
+      const titleWords = action.title.split(/\s+/);
+      let consumedTitle = true;
+
+      const consumeTitle = () => {
+        for (const param of params) {
+          // Only proceed if the param is still missing and title is overly long anyways
+          if (action[param.key.toLowerCase()] || titleWords.length <= 2) {
+            continue;
+          }
+
+          const potentialValue = titleWords[titleWords.length - 1];
+          const potentialKey = titleWords[titleWords.length - 2];
+
+          const keyword = `${param.key}:`;
+
+          if (potentialKey.toLowerCase() != keyword.toLowerCase()) {
+            continue;
+          }
+
+          const valueValidator = new RegExp(`^${param.valuePattern.source}$`);
+
+          if (!valueValidator.test(potentialValue)) {
+            continue;
+          }
+
+          action[param.key.toLowerCase()] = potentialValue;
+          titleWords.splice(-2); // Snip the words from the end
+
+          consumedTitle = true;
+        }
+      };
+
+      while (consumedTitle) {
+        consumedTitle = false;
+        consumeTitle();
+      }
+
+      action.title = titleWords.join(" ");
+    }
+
+    // Final processing
+    if (action.color) {
+      action.color = this.colourNameToHex(action.color) ?? action.color;
+    }
+
+    return action as DiscordAction;
   }
 
   getHelp(shortForm: boolean): string {
@@ -86,7 +160,7 @@ export class CommandRunLog implements CommandInterface {
 
     return await this.sendMessage(
       target,
-      action.editId as string,
+      action.edit as string,
       action.status,
       action.title,
       action.color ? parseInt(action.color, 16) : undefined

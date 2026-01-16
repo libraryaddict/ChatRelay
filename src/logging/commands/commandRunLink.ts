@@ -21,11 +21,11 @@ const params = [
     valuePattern: /[^ ]+/
   },
   {
-    displayName: "Color",
+    key: "Color",
     valuePattern: /[a-zA-Z\d]{1,18}/
   },
   {
-    displayName: "Edit",
+    key: "Edit",
     valuePattern: /[^ ]+/
   }
 ];

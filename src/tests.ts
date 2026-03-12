@@ -5,14 +5,14 @@ import { KOLMessage, PublicMessageType } from "./utils/Typings";
 import {
   formatMessage,
   getPublicMessageType,
-  removeKolEmote as removeKolMeEmote
+  removeKolEmote as removeKolMeEmote,
 } from "./utils/Utils";
 
 // I ultimately end up trying to test stuff anyways
 export function runTests() {
   const testsText: string[] = readFileSync(
     "resources/parse_tests.txt",
-    "utf-8"
+    "utf-8",
   ).split(/\r?\n\r?/);
 
   let failed = 0;
@@ -52,14 +52,16 @@ export function runTests() {
       console.log("======");
 
       if (expectedKol != kolMsg) {
-        console.log(`Expected KoL: ${expectedKol}`);
-        console.log(`Received: ${kolMsg}`);
+        console.log(`Our parsed output:\t${JSON.stringify(kolMsg)}`);
+        console.log(`Expected KoL to be:\t${JSON.stringify(expectedKol)}`);
         console.log("======");
       }
 
       if (expectedDiscord != formatted.discordMessage) {
-        console.log(`Expected Discord: ${expectedDiscord}`);
-        console.log(`Received: ${formatted.discordMessage}`);
+        console.log(
+          `Our parsed output: \t${JSON.stringify(formatted.discordMessage)}`,
+        );
+        console.log(`Expected Discord: \t${JSON.stringify(expectedDiscord)}`);
         console.log("======");
       }
     } catch (e) {

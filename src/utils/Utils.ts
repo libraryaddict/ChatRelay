@@ -18,7 +18,7 @@ const HEX = "0123456789ABCDEF";
 const originalRollover = 1044847800;
 type MessageSegment =
   | { type: "text"; content: string }
-  | { type: "link"; url: string }
+  | { type: "link"; url: string; text?: string }
   | { type: "emoji"; content: string }
   | { type: "decoration"; content: string };
 const emojiReplacements: Record<string, string> = {
@@ -131,7 +131,7 @@ export function cleanupKolMessage(
 
     // Matches <a> tags, individual <b>, <i title=""> tags (opening/closing), and <img> tags
     const combinedRegex =
-      /<a[^>]*?font-weight:\s*bold[^>]*>(.*?)<\/a>|<a [^>]*href=["'](http[^"']*)["'][^>]*>\s*<font color=blue>\s*\[link\]\s*<\/font>\s*<\/a>|(<\/?b>)|<\/?i title=['"]([^>]*)['"][^>]*>|<img [^>]*src=["']([^"']*)["'][^>]*\/?>/gi;
+      /<a[^>]*?font-weight:\s*bold[^>]*>(.*?)<\/a>|<a [^>]*href=["']?(http[^"'>\s]*)["']?[^>]*>\s*<font color=blue>\s*\[link\]\s*<\/font>\s*<\/a>|<a [^>]*href=["']?(http[^"'>\s]*)["']?[^>]*>(.*?)<\/a>|(<\/?b>)|<\/?i title=['"]([^>]*)['"][^>]*>|<img[^>]*src=["']([^"']*)["'][^>]*\/?>/gi;
     let match: RegExpExecArray | null;
 
     while ((match = combinedRegex.exec(msg)) !== null) {
@@ -147,8 +147,16 @@ export function cleanupKolMessage(
         }
       }
 
-      const [fullMatch, boldLinkText, fontLinkUrl, bold, italic, imgSrc] =
-        match;
+      const [
+        fullMatch,
+        boldLinkText,
+        fontLinkUrl,
+        normalLinkUrl,
+        normalLinkText,
+        bold,
+        italic,
+        imgSrc,
+      ] = match;
 
       if (boldLinkText) {
         // Matched a bold <a> tag
@@ -166,6 +174,10 @@ export function cleanupKolMessage(
       } else if (fontLinkUrl) {
         // Matched a <font...>[link]</font> </a> tag
         segments.push({ type: "link", url: fontLinkUrl });
+      } else if (normalLinkUrl) {
+        // Matched a generic <a> tag
+        const content = stripHtml(normalLinkText, false);
+        segments.push({ type: "link", url: normalLinkUrl, text: content });
       } else if (bold) {
         // Matched a <b> or </b> tag
         segments.push({ type: "decoration", content: "**" });
@@ -236,6 +248,37 @@ export function cleanupKolMessage(
       } else if (segment.type === "emoji") {
         return segment.content;
       } else {
+        // Link type segment
+        let isOffsite = false;
+
+        try {
+          if (
+            segment.url.startsWith("http://") ||
+            segment.url.startsWith("https://")
+          ) {
+            const urlObj = new URL(segment.url);
+            isOffsite = !(
+              urlObj.hostname === "kingdomofloathing.com" ||
+              urlObj.hostname.endsWith("www.kingdomofloathing.com")
+            );
+          }
+        } catch (e) {
+          // Ignore invalid URLs
+        }
+
+        // If the link is offsite, we have link text, and output is discord format
+        if (outputGoal === "discord" && isOffsite && segment.text) {
+          let linkText = decode(segment.text);
+
+          if (source !== "Discord") {
+            linkText = escapeSpecialCharacters(linkText);
+          }
+
+          return allowLinkPreviews
+            ? `[${linkText}](${segment.url})`
+            : `[${linkText}](<${segment.url}>)`;
+        }
+
         // If we do not plan to modify the url displayed
         if (outputGoal === "plaintext" || allowLinkPreviews) {
           return segment.url;
@@ -356,7 +399,7 @@ function escapeSpecialCharacters(text: string): string {
   // Some people do see the escape character as they have formatting turned off. So we want to avoid showing it if it would appear
   return text
     .replaceAll(/([\\@#*_])/gm, "\\$1") // Disable backslashes, mentions, channels, bold and italics (We add those ourselves and don't want trouble)
-    .replaceAll(/(\[.*?)(\])/gm, "\\$1\\$2") // Prevent []
+    .replaceAll(/(\[.*?)(\])/gm, "\\$1\\$2") // Prevent[]
     .replaceAll(/(<.*?)(>)/gm, "\\$1\\$2") // Prevent <>
     .replaceAll(/([`])(?=.*?\1)/gm, "\\$1") // Formatting codes that requires a closing tag of the same symbol
     .replaceAll(/(:[^\s]+?)(:)/gim, "$1\\$2") // Prevent :emoji:

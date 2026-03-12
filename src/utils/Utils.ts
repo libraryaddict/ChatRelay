@@ -3,7 +3,7 @@ import {
   FormattedMessage,
   KOLMessage,
   PublicMessageType,
-  ServerSide
+  ServerSide,
 } from "./Typings";
 
 /**
@@ -18,13 +18,13 @@ const HEX = "0123456789ABCDEF";
 const originalRollover = 1044847800;
 type MessageSegment =
   | { type: "text"; content: string }
-  | { type: "link"; url: string }
+  | { type: "link"; url: string; text?: string }
   | { type: "emoji"; content: string }
   | { type: "decoration"; content: string };
 const emojiReplacements: Record<string, string> = {
   "12x12skull.gif": ":skull:",
   "12x12heart.png": ":heart:",
-  "12x12snowman.gif": ":snowman:"
+  "12x12snowman.gif": ":snowman:",
 };
 
 export function encodeToKolEncoding(x: string): string {
@@ -83,7 +83,7 @@ export function isRolloverMessage(message: KOLMessage): boolean {
   return (
     message.msg &&
     /^(The system will go down for nightly maintenance in \d+ minutes?|Rollover is over).$/.test(
-      message.msg
+      message.msg,
     )
   );
 }
@@ -93,7 +93,7 @@ export function isReplaceableUpdateMessage(message: KOLMessage) {
     message.type == "system" &&
     message.msg &&
     /A new [a-z]+ has been posted. Use the \/updates command to read it./is.test(
-      message.msg
+      message.msg,
     )
   );
 }
@@ -114,7 +114,7 @@ export function cleanupKolMessage(
   messageType: PublicMessageType | undefined,
   outputGoal: "plaintext" | "discord" = "plaintext",
   allowLinkPreviews = true, // Only used on discord
-  source: ServerSide = "KoL"
+  source: ServerSide = "KoL",
 ): string {
   // Strip out zero-width space characters
   msg = stripInvisibleCharacters(msg);
@@ -131,7 +131,7 @@ export function cleanupKolMessage(
 
     // Matches <a> tags, individual <b>, <i title=""> tags (opening/closing), and <img> tags
     const combinedRegex =
-      /<a[^>]*?font-weight:\s*bold[^>]*>(.*?)<\/a>|<a [^>]*href=["'](http[^"']*)["'][^>]*>\s*<font color=blue>\s*\[link\]\s*<\/font>\s*<\/a>|(<\/?b>)|<\/?i title=['"]([^>]*)['"][^>]*>|<img [^>]*src=["']([^"']*)["'][^>]*\/?>/gi;
+      /<a[^>]*?font-weight:\s*bold[^>]*>(.*?)<\/a>|<a [^>]*href=["']?(http[^"'>\s]*)["']?[^>]*>\s*<font color=blue>\s*\[link\]\s*<\/font>\s*<\/a>|<a [^>]*href=["']?(http[^"'>\s]*)["']?[^>]*>(.*?)<\/a>|(<\/?b>)|<\/?i title=['"]([^>]*)['"][^>]*>|<img[^>]*src=["']([^"']*)["'][^>]*\/?>/gi;
     let match: RegExpExecArray | null;
 
     while ((match = combinedRegex.exec(msg)) !== null) {
@@ -142,13 +142,21 @@ export function cleanupKolMessage(
         if (content.length > 0) {
           segments.push({
             type: "text",
-            content: content
+            content: content,
           });
         }
       }
 
-      const [fullMatch, boldLinkText, fontLinkUrl, bold, italic, imgSrc] =
-        match;
+      const [
+        fullMatch,
+        boldLinkText,
+        fontLinkUrl,
+        normalLinkUrl,
+        normalLinkText,
+        bold,
+        italic,
+        imgSrc,
+      ] = match;
 
       if (boldLinkText) {
         // Matched a bold <a> tag
@@ -158,7 +166,7 @@ export function cleanupKolMessage(
         if (content.length > 0) {
           segments.push({
             type: "text",
-            content: content
+            content: content,
           });
         }
 
@@ -166,6 +174,10 @@ export function cleanupKolMessage(
       } else if (fontLinkUrl) {
         // Matched a <font...>[link]</font> </a> tag
         segments.push({ type: "link", url: fontLinkUrl });
+      } else if (normalLinkUrl) {
+        // Matched a generic <a> tag
+        const content = stripHtml(normalLinkText, false);
+        segments.push({ type: "link", url: normalLinkUrl, text: content });
       } else if (bold) {
         // Matched a <b> or </b> tag
         segments.push({ type: "decoration", content: "**" });
@@ -196,7 +208,7 @@ export function cleanupKolMessage(
     if (content.length > 0) {
       segments.push({
         type: "text",
-        content: content
+        content: content,
       });
     }
   }
@@ -236,6 +248,37 @@ export function cleanupKolMessage(
       } else if (segment.type === "emoji") {
         return segment.content;
       } else {
+        // Link type segment
+        let isOffsite = false;
+
+        try {
+          if (
+            segment.url.startsWith("http://") ||
+            segment.url.startsWith("https://")
+          ) {
+            const urlObj = new URL(segment.url);
+            isOffsite = !(
+              urlObj.hostname === "kingdomofloathing.com" ||
+              urlObj.hostname.endsWith("www.kingdomofloathing.com")
+            );
+          }
+        } catch (e) {
+          // Ignore invalid URLs
+        }
+
+        // If the link is offsite, we have link text, and output is discord format
+        if (outputGoal === "discord" && isOffsite && segment.text) {
+          let linkText = decode(segment.text);
+
+          if (source !== "Discord") {
+            linkText = escapeSpecialCharacters(linkText);
+          }
+
+          return allowLinkPreviews
+            ? `[${linkText}](${segment.url})`
+            : `[${linkText}](<${segment.url}>)`;
+        }
+
         // If we do not plan to modify the url displayed
         if (outputGoal === "plaintext" || allowLinkPreviews) {
           return segment.url;
@@ -255,7 +298,7 @@ export function cleanupKolMessage(
 
 function removeBellowBold(segments: MessageSegment[]) {
   const skullOffset = segments.findIndex(
-    (s) => s.type === "emoji" && s.content === ":skull:"
+    (s) => s.type === "emoji" && s.content === ":skull:",
   );
 
   // If it is the first segment, or not in
@@ -302,7 +345,7 @@ function removeBellowBold(segments: MessageSegment[]) {
 
 function removeLink(
   currentSegment: MessageSegment,
-  nextSegment: MessageSegment
+  nextSegment: MessageSegment,
 ) {
   // Check for a link segment followed by a text segment
   if (currentSegment.type !== "link" || nextSegment.type !== "text") {
@@ -356,7 +399,7 @@ function escapeSpecialCharacters(text: string): string {
   // Some people do see the escape character as they have formatting turned off. So we want to avoid showing it if it would appear
   return text
     .replaceAll(/([\\@#*_])/gm, "\\$1") // Disable backslashes, mentions, channels, bold and italics (We add those ourselves and don't want trouble)
-    .replaceAll(/(\[.*?)(\])/gm, "\\$1\\$2") // Prevent []
+    .replaceAll(/(\[.*?)(\])/gm, "\\$1\\$2") // Prevent[]
     .replaceAll(/(<.*?)(>)/gm, "\\$1\\$2") // Prevent <>
     .replaceAll(/([`])(?=.*?\1)/gm, "\\$1") // Formatting codes that requires a closing tag of the same symbol
     .replaceAll(/(:[^\s]+?)(:)/gim, "$1\\$2") // Prevent :emoji:
@@ -389,7 +432,7 @@ export function formatMessage(
   message: string,
   type: PublicMessageType,
   allowLinkPreviews: boolean,
-  source: ServerSide
+  source: ServerSide,
 ): FormattedMessage {
   const senderName = type === "system" ? "System" : sender;
 
@@ -398,14 +441,14 @@ export function formatMessage(
     type,
     "plaintext",
     allowLinkPreviews,
-    source
+    source,
   );
   let discordMessage = cleanupKolMessage(
     message,
     type,
     "discord",
     allowLinkPreviews,
-    source
+    source,
   );
 
   let senderNameBrackets = sender;
@@ -454,7 +497,7 @@ export function formatMessage(
     embedDescription: embedDesc,
     discordMessage: discordMessage,
     kolPrefix: kolPrefix,
-    kolMessage: kolMessage
+    kolMessage: kolMessage,
   };
 }
 
@@ -465,7 +508,7 @@ export function getBadKolEffects(): string[] {
     "Bruised Jaw",
     "So Much Holiday Fun!",
     "On Safari",
-    "Harpooned and Marooned"
+    "Harpooned and Marooned",
   ].map((s) => s.toLowerCase());
 }
 
@@ -501,7 +544,7 @@ export function stripHtml(message: string, shouldTrim: boolean = true): string {
       index: match.index,
       fullTag: match[0],
       tagName: match[1].toLowerCase(),
-      title: titleMatch?.[1]
+      title: titleMatch?.[1],
     });
   }
 
@@ -512,7 +555,7 @@ export function stripHtml(message: string, shouldTrim: boolean = true): string {
   while ((match = closingTagRegex.exec(message)) !== null) {
     closingTags.push({
       index: match.index,
-      tagName: match[1].toLowerCase()
+      tagName: match[1].toLowerCase(),
     });
   }
 
@@ -521,11 +564,11 @@ export function stripHtml(message: string, shouldTrim: boolean = true): string {
     const { index: openIndex, fullTag, tagName, title } = openingTag;
 
     const possibleClosings = closingTags.filter(
-      (closing) => closing.tagName === tagName && closing.index > openIndex
+      (closing) => closing.tagName === tagName && closing.index > openIndex,
     );
 
     const conflictingOpenings = openingTags.filter(
-      (other) => other.tagName === tagName && other.index > openIndex
+      (other) => other.tagName === tagName && other.index > openIndex,
     );
 
     for (let i = 0; i < possibleClosings.length; i++) {
@@ -569,7 +612,7 @@ export function stripHtml(message: string, shouldTrim: boolean = true): string {
 export function splitMessage(
   prefix: string,
   message: string,
-  limit: number = 245
+  limit: number = 245,
 ): string[] {
   limit -= encodeToKolEncoding(prefix).length;
 
@@ -636,7 +679,7 @@ export function isModMessage(message: KOLMessage): boolean {
 }
 
 export function getPublicMessageType(
-  message: KOLMessage
+  message: KOLMessage,
 ): PublicMessageType | undefined {
   if (message.type != "public") {
     return undefined;
@@ -671,7 +714,7 @@ export function getKolDay(time: number = Math.round(Date.now() / 1000)) {
 const secondsInDay = 24 * 60 * 60;
 
 export function getSecondsElapsedInDay(
-  time: number = Math.round(Date.now() / 1000)
+  time: number = Math.round(Date.now() / 1000),
 ) {
   const secondsSinceOriginalTime = time - originalRollover;
   const secondsElapsedInDay = secondsSinceOriginalTime % secondsInDay;

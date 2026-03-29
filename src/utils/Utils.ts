@@ -467,7 +467,7 @@ export function formatMessage(
     // We use * instead of _ as _ interferes with discord search
     discordMessage = `***${senderNameBrackets}** ${discordMessage}*`;
   } else if (type === "mod announcement") {
-    embedTitle = `Mod Warning by ${senderName}`;
+    embedTitle = `Mod Announcement by ${senderName}`;
     embedColor = 0x2ca816;
     embedDesc = discordMessage;
 

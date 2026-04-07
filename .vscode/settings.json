@@ -1,12 +1,12 @@
 {
-  "editor.formatOnPaste": false, // required
-  "editor.formatOnType": false, // required
-  "editor.formatOnSave": true, // optional
+  "editor.formatOnPaste": false,
+  "editor.formatOnType": false,
+  "editor.formatOnSave": true,
   "editor.formatOnSaveMode": "file", // required to format on save
+
   "editor.codeActionsOnSave": {
-    "source.fixAll": "explicit",
     "source.fixAll.eslint": "explicit"
   },
-  "eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"],
-  "terminal.integrated.persistentSessionReviveProcess": "onExitAndWindowClose"
+
+  "eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"]
 }

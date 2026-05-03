@@ -713,6 +713,10 @@ export function getKolDay(time: number = Math.round(Date.now() / 1000)) {
 
 const secondsInDay = 24 * 60 * 60;
 
+export function getSecondsToRollover() {
+  return secondsInDay - getSecondsElapsedInDay();
+}
+
 export function getSecondsElapsedInDay(
   time: number = Math.round(Date.now() / 1000),
 ) {

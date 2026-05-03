@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createClient } from "../utils/network";
 
 export interface WebhookData {
   url: string;
@@ -63,6 +64,8 @@ async function processQueue(url: string): Promise<void> {
   processQueue(url);
 }
 
+const discordAxios = createClient();
+
 export async function postToWebhook(data: WebhookData): Promise<string> {
   const { url, errorOnRateLimit = false } = data;
 
@@ -125,9 +128,13 @@ export async function postToWebhook(data: WebhookData): Promise<string> {
     let res;
 
     if (data.editMessage != null) {
-      res = await axios.patchForm(urledParams, { payload_json: jsoned });
+      res = await discordAxios.patchForm(urledParams, {
+        payload_json: jsoned,
+      });
     } else {
-      res = await axios.postForm(urledParams, { payload_json: jsoned });
+      res = await discordAxios.postForm(urledParams, {
+        payload_json: jsoned,
+      });
     }
 
     return res.data["id"];

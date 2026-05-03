@@ -1,14 +1,14 @@
 import { Mutex } from "async-mutex";
 import { ChannelId, ChatChannel, ChatMessage, KOLMessage } from "./Typings";
-import axios from "axios";
+import { AxiosInstance } from "axios";
 import { KolProcessor } from "./KoLProcessor";
 import { ChatManager } from "../ChatManager";
-
-axios.defaults.timeout = 30000;
+import { createClient } from "./network";
 
 export class RemoteKolClient extends KolProcessor implements ChatChannel {
   private messages: KOLMessage[] = [];
   private lastMid: string | null = null;
+  private axios: AxiosInstance = createClient();
 
   /**
    * @param baseUrl The root URL of the remote chat service
@@ -16,7 +16,7 @@ export class RemoteKolClient extends KolProcessor implements ChatChannel {
   constructor(
     private readonly chatManager: ChatManager,
     private readonly channelIds: ChannelId[],
-    private readonly baseUrl: string
+    private readonly baseUrl: string,
   ) {
     super();
   }
@@ -67,7 +67,7 @@ export class RemoteKolClient extends KolProcessor implements ChatChannel {
       this.getChatChannels()
         .map((s) => s.holderId)
         .filter((s) => s)
-        .join(",")
+        .join(","),
     );
 
     return url.toString();
@@ -75,11 +75,11 @@ export class RemoteKolClient extends KolProcessor implements ChatChannel {
 
   private async fetchNewMessages(): Promise<KOLMessage[]> {
     const url = this.getRemoteUrl();
-    const response = await axios(url, {
+    const response = await this.axios(url, {
       method: "GET",
       headers: {
-        Accept: "application/json"
-      }
+        Accept: "application/json",
+      },
     });
 
     if (response.status != 200) {
@@ -105,7 +105,7 @@ export class RemoteKolClient extends KolProcessor implements ChatChannel {
 
   async sendMessageToChannel(
     target: ChannelId,
-    message: ChatMessage
+    message: ChatMessage,
   ): Promise<void> {}
 
   async start(): Promise<void> {
@@ -129,7 +129,7 @@ export class RemoteKolClient extends KolProcessor implements ChatChannel {
         } catch (e) {
           console.error(
             `Errored on ${this.getRemoteUrl()} while fetching messages:`,
-            e
+            e,
           );
         }
       });

@@ -12,6 +12,28 @@ export interface ChatUser extends KoLUser {
   color?: string;
 }
 
+export type KoLStatus = {
+  fetched?: number;
+  playerid: string;
+  name: string;
+  turnsPlayed: number;
+  adventures: number;
+  full: number;
+  drunk: number;
+  spleen: number;
+  rollover: number;
+  hp: number;
+  mp: number;
+  maxHP: number;
+  maxMP: number;
+  familiar?: number;
+  meat: number;
+  level: number;
+  effects: KolEffect[];
+  daynumber: number;
+  pwd: string;
+};
+
 export type MessageType = "private" | "public" | "event" | "system";
 export type MessageFormat = null | "0" | "1" | "2" | "3" | "4" | "98" | "99";
 export type PublicMessageType =

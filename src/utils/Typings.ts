@@ -71,6 +71,12 @@ export type KolKmail = {
 
 export type ServerSide = "Discord" | "KoL" | "Internal" | "Remote";
 export type KolAccountType = "CLAN" | "PUBLIC" | "IGNORE";
+export type LoginResult =
+  | "Bad Login"
+  | "Unknown"
+  | "Maint"
+  | "Success"
+  | "Error";
 
 export type ChannelId = {
   owningAccount: string;

@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, Method } from "axios";
+import { AxiosInstance, AxiosResponse, Method } from "axios";
 import {
   KoLUser,
   KOLMessage,
@@ -9,6 +9,7 @@ import {
   KolEffect,
   KolKmail,
   KoLStatus,
+  LoginResult,
 } from "./Typings";
 import {
   encodeToKolEncoding,
@@ -52,7 +53,6 @@ export class KoLClient extends KolProcessor implements ChatChannel {
   private newlyStarted = true;
   private axios: AxiosInstance;
   private pwd: string;
-  private failedLogins = 0;
 
   externalMessageProcessor: (messages: KOLMessage[]) => void = () => {};
 
@@ -95,9 +95,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       await this.removeBadEffects();
       await this.checkFortuneTeller();
     } catch (e) {
-      console.error(
-        `Status check error on ${this.getUsername()}:` + this.getUsername(),
-      );
+      console.error(`Status check error on ${this.getUsername()}:` + e);
     }
   }
 
@@ -365,75 +363,66 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     return map;
   }
 
-  async logIn(): Promise<boolean> {
-    await this.mutex.acquire();
+  getRedirected(response: AxiosResponse): string {
+    const url = response?.request?.res?.responseUrl;
+
+    if (typeof url != "string") {
+      return null;
+    }
+
+    const match = url.match(
+      /^(?:https:\/\/www\.kingdomofloathing\.com)?\/?(.*)$/,
+    );
+
+    if (match == null) {
+      return null;
+    }
+
+    return match[1];
+  }
+
+  private async logIn(): Promise<LoginResult> {
+    this.pwd = undefined;
+    console.log(
+      `Not logged in. Logging in as ${this._loginParameters.get("loginname")}`,
+    );
 
     try {
-      console.log(
-        `Not logged in. Logging in as ${this._loginParameters.get(
-          "loginname",
-        )}`,
+      const loginResponse = await this.axios.post(
+        `login.php`,
+        this._loginParameters,
       );
+      const location = loginResponse.request?.res?.responseUrl || "";
 
-      try {
-        await this.axios("login.php", {
-          method: "POST",
-          data: this._loginParameters,
-          maxRedirects: 0,
-          validateStatus: (status) => status === 302,
-        });
-
-        const status = await this.getStatus();
-
-        if (status == null) {
-          throw "Not logged in?";
-        }
-
-        this._player = {
-          id: status.playerid,
-          name: status.name,
-        };
-        console.log("Login success.");
-        this.failedLogins = 0;
-
-        await this.doInitialChannelJoining();
-
-        return true;
-      } catch (e) {
-        let toSleep = 1;
-
-        if (this.failedLogins <= 5) {
-          toSleep = 1;
-        } else if (this.failedLogins <= 10) {
-          toSleep = 5;
-        } else if (this.failedLogins <= 15) {
-          toSleep = 20;
-        } else {
-          toSleep = 60;
-        }
-
-        if (this.failedLogins++ < 5) {
-          console.log(`Login failed...`);
-        } else {
-          console.log(`Login failed... Sleeping ${toSleep} minutes`, e);
-        }
-
-        setTimeout(() => this.logIn(), 60_000 * toSleep);
-
-        return false;
+      if (location.includes("maint.php")) {
+        return "Maint";
       }
-    } finally {
-      this.mutex.release();
+
+      if (location.includes("login.php")) {
+        return "Bad Login";
+      }
+
+      const status = await this.getStatus();
+
+      if (!status || !status.pwd) {
+        return "Unknown";
+      }
+
+      return "Success";
+    } catch (e) {
+      console.error(`Login error for ${this.getUsername()}: `, e);
+
+      return "Error";
     }
   }
 
   logout() {
-    // Technically I should call logout.php...
+    // Technically should call logout.php
     this.pwd = null;
   }
 
   loggedIn(): boolean {
-    return this.pwd == null;
+    return this.pwd != null;
   }
 
   async visitUrl(
@@ -443,38 +432,64 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     data: any = null,
     method: Method = "POST",
   ): Promise<any> {
-    try {
-      const page = await this.axios.request({
-        url,
-        method,
-        withCredentials: true,
-        params: {
-          ...(pwd ? { pwd: this.pwd } : {}),
-          ...parameters,
-        },
-        data,
-      });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const page = await this.axios.request({
+          url,
+          method,
+          withCredentials: true,
+          params: {
+            ...(pwd && this.pwd ? { pwd: this.pwd } : {}),
+            ...parameters,
+          },
+          data,
+        });
 
-      return page.data;
-    } catch (error) {
-      if (axios.isAxiosError(error)) {
+        const location = page.request?.res?.responseUrl || "";
+
+        // Never retry during maintenance
+        if (location.includes("maint.php")) {
+          this.logout();
+
+          return null;
+        }
+
+        // Session was dead, we logged in, now retry the request
+        if (location.includes("login.php")) {
+          this.logout();
+
+          if (attempt == 0) {
+            await this.loginWithBackoff();
+            continue;
+          }
+
+          return null;
+        }
+
+        return page.data;
+      } catch (error: any) {
         const status = error.response?.status;
 
+        // Handle dead session cookies gracefully
         if (status === 401 || status === 403) {
-          this.pwd = null;
-          console.warn(`HTTP ${status}: logged out.`);
-        } else if (status === 429) {
-          console.warn("HTTP 429: rate limited.");
-        } else if (status && status >= 500) {
-          console.warn(`HTTP ${status}: temporary server error.`);
-        } else {
-          console.warn(`HTTP ${status ?? "none"}: request failed.`);
-        }
-      } else {
-        console.error("Unexpected request error.", error);
-      }
+          this.logout();
 
-      return null;
+          if (attempt == 0) {
+            await this.loginWithBackoff();
+            continue;
+          }
+        }
+        // Handle rate limits (429) or random server hiccups (5xx)
+        else if (status === 429 || (status && status >= 500)) {
+          if (attempt == 0) {
+            await new Promise((res) => setTimeout(res, 5000));
+            continue;
+          }
+        }
+
+        // If it's a different error or we are out of retries, fail safely
+        return null;
+      }
     }
   }
 
@@ -714,11 +729,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       for: FOR_WHO,
     });
 
-    if (apiResponse.status != 200) {
-      return [];
-    }
-
-    return apiResponse.data;
+    return apiResponse;
   }
 
   async sendKmail(name: string, message: string) {
@@ -813,43 +824,90 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     await this.processKolMessage(message);
   }
 
+  async loginWithBackoff() {
+    // runExclusive safely locks the block and unlocks it when done (or on error)
+    await this.mutex.runExclusive(async () => {
+      // Short-circuit if another queued request already logged us in
+      if (this.loggedIn()) {
+        return;
+      }
+
+      let loginAttempts = 0;
+
+      while (true) {
+        while (
+          getSecondsToRollover() < 10 ||
+          getSecondsElapsedInDay() < 4 * 60
+        ) {
+          await new Promise((res) => setTimeout(res, 30_000));
+        }
+
+        loginAttempts++;
+        const result = await this.logIn();
+
+        if (result === "Success") {
+          console.log(`${this.getUsername()} logged in.`);
+
+          return;
+        }
+
+        // Simple backoff: Maint gets 1m, others get exponentially longer up to 10m max
+        const minutesToWait =
+          result === "Maint" ? 1 : Math.min(loginAttempts * 2, 10);
+        console.log(
+          `Login failed for ${this.getUsername()}: (${result}). Retrying in ${minutesToWait}m...`,
+        );
+
+        await new Promise((res) => setTimeout(res, minutesToWait * 60_000));
+      }
+    });
+  }
+
   async start(): Promise<void> {
     console.log("Starting " + this.getUsername() + "...");
 
-    await this.logIn().then(async () => {
-      const secondsToRollover = getSecondsToRollover();
+    await this.loginWithBackoff()
+      .then(() => this.doInitialChannelJoining())
+      .then(async () => {
+        const secondsToRollover = getSecondsToRollover();
 
-      console.log(
-        `The next rollover is in ${humanReadableTime(secondsToRollover)}`,
-      );
+        console.log(
+          `The next rollover is in ${humanReadableTime(secondsToRollover)}`,
+        );
 
-      console.log("Initial setup complete. Polling messages.");
+        console.log("Initial setup complete. Polling messages.");
 
-      this.messages.push(...(await this.fetchNewMessages()));
-      const mutex = new Mutex();
+        this.messages.push(...(await this.fetchNewMessages()));
+        const mutex = new Mutex();
 
-      setInterval(() => {
-        if (getSecondsElapsedInDay() < 4 * 60 || getSecondsToRollover() < 3) {
-          return;
-        }
-
-        if (mutex.isLocked()) {
-          return;
-        }
-
-        mutex.runExclusive(async () => {
-          try {
-            this.messages.push(...(await this.fetchNewMessages()));
-          } catch (e) {
-            console.error(
-              `Errored on ${this.getUsername()} while fetching messages:`,
-              e,
-            );
+        setInterval(() => {
+          if (getSecondsElapsedInDay() < 4 * 60 || getSecondsToRollover() < 3) {
+            return;
           }
-        });
-      }, 3000);
 
-      this.processMessage();
-    });
+          if (mutex.isLocked()) {
+            return;
+          }
+
+          mutex.runExclusive(async () => {
+            try {
+              if (!this.loggedIn()) {
+                this.logIn();
+
+                return;
+              }
+
+              this.messages.push(...(await this.fetchNewMessages()));
+            } catch (e) {
+              console.error(
+                `Errored on ${this.getUsername()} while fetching messages:`,
+                e,
+              );
+            }
+          });
+        }, 3000);
+
+        this.processMessage();
+      });
   }
 }

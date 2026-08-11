@@ -1,4 +1,4 @@
-import { AxiosInstance, AxiosResponse, Method } from "axios";
+import { AxiosInstance, Method } from "axios";
 import {
   KoLUser,
   KOLMessage,
@@ -46,7 +46,12 @@ export class KoLClient extends KolProcessor implements ChatChannel {
   private messages: KOLMessage[] = [];
   private chatManager: ChatManager;
   private accountType: KolAccountType;
-  private mutex = new Mutex();
+  // Serializes calls to sendMessageRetry so messages aren't sent out of order.
+  private sendMutex = new Mutex();
+  // Serializes login attempts. Kept separate from sendMutex: visitUrl() can call
+  // loginWithBackoff() while running inside a sendMutex-locked callback, and since
+  // Mutex isn't reentrant, sharing one mutex there would deadlock.
+  private loginMutex = new Mutex();
   private lastAntidoteBeg = 0;
   private nextStatusCheck = 0;
   private fortuneTeller: "UNTESTED" | "EXISTS" | "DOESNT EXIST" = "UNTESTED";
@@ -151,6 +156,16 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     }
 
     return channels;
+  }
+
+  async eat(item: number, amount: number) {
+    for (let i = 0; i < amount; i++) {
+      await this.visitUrl(`inv_eat.php`, {
+        which: 1,
+        whichitem: item,
+        ajax: 1,
+      });
+    }
   }
 
   getChatChannels(): ChannelId[] {
@@ -363,24 +378,6 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     return map;
   }
 
-  getRedirected(response: AxiosResponse): string {
-    const url = response?.request?.res?.responseUrl;
-
-    if (typeof url != "string") {
-      return null;
-    }
-
-    const match = url.match(
-      /^(?:https:\/\/www\.kingdomofloathing\.com)?\/?(.*)$/,
-    );
-
-    if (match == null) {
-      return null;
-    }
-
-    return match[1];
-  }
-
   private async logIn(): Promise<LoginResult> {
     this.pwd = undefined;
     console.log(
@@ -546,7 +543,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     try {
       // We run the encoding as part of the url cos kol seems to handroll their own encoding?
       // And because axios will encode the message in a real encoding if we don't prevent that
-      await this.mutex.runExclusive(async () => {
+      await this.sendMutex.runExclusive(async () => {
         await this.visitUrl(
           "submitnewchat.php?graf=" + encodeToKolEncoding(msg),
           {
@@ -732,13 +729,28 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     return apiResponse;
   }
 
-  async sendKmail(name: string, message: string) {
-    await this.visitUrl("sendmessage.php", {
+  async sendKmail(
+    target: string,
+    message: string,
+    meat: number = 0,
+    items: [number, number][] = [],
+  ) {
+    let currentItem: number = 1;
+    const args = {
       action: "send",
-      towho: name,
+      towho: target.toString(),
       message: message,
       savecopy: "on",
-    });
+      sendmeat: meat > 0 ? meat.toString() : "",
+    };
+
+    for (const [item, count] of items) {
+      args["howmany" + currentItem] = count.toString();
+      args["whichitem" + currentItem] = item.toString();
+      currentItem++;
+    }
+
+    await this.visitUrl(`sendmessage.php`, args);
   }
 
   async checkFortuneTeller() {
@@ -812,7 +824,11 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
     if (!message) {
       // Only run a status check when we're not processing anything
-      if (!this.messageProcessingMutex.isLocked() && !this.mutex.isLocked()) {
+      if (
+        !this.messageProcessingMutex.isLocked() &&
+        !this.sendMutex.isLocked() &&
+        !this.loginMutex.isLocked()
+      ) {
         this.doStatusCheck();
       }
 
@@ -826,7 +842,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
   async loginWithBackoff() {
     // runExclusive safely locks the block and unlocks it when done (or on error)
-    await this.mutex.runExclusive(async () => {
+    await this.loginMutex.runExclusive(async () => {
       // Short-circuit if another queued request already logged us in
       if (this.loggedIn()) {
         return;
@@ -878,21 +894,21 @@ export class KoLClient extends KolProcessor implements ChatChannel {
         console.log("Initial setup complete. Polling messages.");
 
         this.messages.push(...(await this.fetchNewMessages()));
-        const mutex = new Mutex();
+        const fetchMutex = new Mutex();
 
         setInterval(() => {
           if (getSecondsElapsedInDay() < 4 * 60 || getSecondsToRollover() < 3) {
             return;
           }
 
-          if (mutex.isLocked()) {
+          if (fetchMutex.isLocked()) {
             return;
           }
 
-          mutex.runExclusive(async () => {
+          fetchMutex.runExclusive(async () => {
             try {
               if (!this.loggedIn()) {
-                this.logIn();
+                await this.loginWithBackoff();
 
                 return;
               }

@@ -35,7 +35,7 @@ export abstract class KolProcessor {
 
   async processKolMessage(message: KOLMessage) {
     try {
-      this.messageProcessingMutex.runExclusive(async () => {
+      await this.messageProcessingMutex.runExclusive(async () => {
         // pvp radio
         if (message != null && message.who != null && message.who.id == "-69") {
           return;

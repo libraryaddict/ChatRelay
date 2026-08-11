@@ -720,11 +720,39 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     return modName;
   }
 
+  getItems(msg: string): [string, [number, number][]] {
+    let itemMatch: string[];
+    const items: [number, number][] = [];
+
+    while (
+      (itemMatch = msg.match(
+        /(?:<center>)?<table class="item".*?rel="(.*?)".*?title="(.*?)".*?descitem\(([\d]*)\).*?<\/table>(?:<\/center>)?/,
+      )) != null
+    ) {
+      const match2 = itemMatch[0].match(/id=(\d+).*?n=(\d+)/);
+
+      const item = parseInt(match2[1]);
+      const count = parseInt(match2[2]);
+
+      items.push([item, count]);
+
+      msg = msg.replace(itemMatch[0], "");
+    }
+
+    return [msg, items];
+  }
+
   async getKmails(): Promise<KolKmail[]> {
-    const apiResponse = await this.visitUrl("api.php", {
+    const apiResponse: KolKmail[] = await this.visitUrl("api.php", {
       what: "kmail",
       for: FOR_WHO,
     });
+
+    if (apiResponse) {
+      for (const kmail of apiResponse) {
+        kmail.items = this.getItems(kmail.message)[1];
+      }
+    }
 
     return apiResponse;
   }

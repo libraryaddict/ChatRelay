@@ -67,6 +67,7 @@ export type KolKmail = {
   message: string; // The actual message, can contain html & \n
   azunixtime: string; // Seconds epoch
   localtime: string; // The local time (as per account settings in kol)
+  items: [number, number][];
 };
 
 export type ServerSide = "Discord" | "KoL" | "Internal" | "Remote";

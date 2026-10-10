@@ -584,6 +584,13 @@ export class KoLClient extends KolProcessor implements ChatChannel {
         return [];
       }
 
+      // KoL answers a dead session here with 200 and "out" instead of redirecting to login.php
+      if (newChatMessagesResponse["out"]) {
+        this.logout();
+
+        return [];
+      }
+
       this._lastFetchedMessages = newChatMessagesResponse["last"];
 
       const newWhispers: KOLMessage[] = newChatMessagesResponse["msgs"];
@@ -877,16 +884,13 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       }
 
       let loginAttempts = 0;
+      let inMaint = false;
 
       while (true) {
-        while (
-          getSecondsToRollover() < 10 ||
-          getSecondsElapsedInDay() < 4 * 60
-        ) {
-          await new Promise((res) => setTimeout(res, 30_000));
+        while (getSecondsToRollover() < 10 || getSecondsElapsedInDay() < 30) {
+          await new Promise((res) => setTimeout(res, 5_000));
         }
 
-        loginAttempts++;
         const result = await this.logIn();
 
         if (result === "Success") {
@@ -895,9 +899,21 @@ export class KoLClient extends KolProcessor implements ChatChannel {
           return;
         }
 
-        // Simple backoff: Maint gets 1m, others get exponentially longer up to 10m max
-        const minutesToWait =
-          result === "Maint" ? 1 : Math.min(loginAttempts * 2, 10);
+        if (result === "Maint") {
+          if (!inMaint) {
+            console.log(
+              `Rollover in progress for ${this.getUsername()}, retrying every 30s...`,
+            );
+          }
+
+          inMaint = true;
+          await new Promise((res) => setTimeout(res, 30_000));
+          continue;
+        }
+
+        inMaint = false;
+        loginAttempts++;
+        const minutesToWait = Math.min(loginAttempts * 2, 10);
         console.log(
           `Login failed for ${this.getUsername()}: (${result}). Retrying in ${minutesToWait}m...`,
         );
@@ -925,7 +941,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
         const fetchMutex = new Mutex();
 
         setInterval(() => {
-          if (getSecondsElapsedInDay() < 4 * 60 || getSecondsToRollover() < 3) {
+          if (getSecondsElapsedInDay() < 30 || getSecondsToRollover() < 3) {
             return;
           }
 

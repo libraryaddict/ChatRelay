@@ -18,8 +18,9 @@ import {
   getSecondsElapsedInDay,
   getSecondsToRollover,
   humanReadableTime,
-  isReplaceableUpdateMessage,
+  createUpdateMessage,
   isUpdateMessage,
+  parseUpdates,
   splitMessage,
   stripHtml,
   stripInvisibleCharacters,
@@ -28,6 +29,7 @@ import { ChatManager } from "../ChatManager";
 import { Mutex } from "async-mutex";
 import { KolProcessor } from "./KoLProcessor";
 import { createClient } from "./network";
+import { Settings } from "../Settings";
 
 const FOR_WHO = `DiscordChat (Maintained by irrat)`;
 
@@ -266,19 +268,9 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       await this.checkFortuneTeller();
     }
 
-    // If its a generic update message
     if (isUpdateMessage(message)) {
-      // Get the updates
-      const updates = await this.getTrivialUpdates();
-
-      // If at least one message, update the string
-      if (updates.length > 0) {
-        if (isReplaceableUpdateMessage(message)) {
-          message.msg = updates[0];
-        } else {
-          message.msg = `${message.msg} || ${updates[0]}`;
-        }
-      }
+      message.msg = undefined;
+      await this.checkUpdateMessages();
     }
   }
 
@@ -835,23 +827,40 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     await Promise.allSettled(promises);
   }
 
-  async getTrivialUpdates(): Promise<string[]> {
-    const response = (
-      await this.visitUrl("submitnewchat.php", {
-        graf: `/clan /updates`,
-        j: 1,
-      })
-    )["output"] as string;
-
-    if (!response) {
-      return null;
+  private async checkUpdateMessages() {
+    if (!this.channels.some((c) => c.holderId == "system")) {
+      return;
     }
 
-    return [
-      ...(response.matchAll(
-        /<b>[a-z]+ \d+<\/b> - (.*?)(?=(?:<(?:p|br)>(?:<hr>|<b>[a-z]+ \d+<\/b> - )))/gi,
-      ) ?? []),
-    ].map((m) => m[1]);
+    const announcements = await this.getUpdates("updates");
+    const trivialUpdates = await this.getUpdates("trivial");
+
+    if (announcements.length == 0 || trivialUpdates.length == 0) {
+      return;
+    }
+
+    const updates = [...announcements, ...trivialUpdates];
+
+    const seen = new Settings().getSeenUpdates();
+    new Settings().setSeenUpdates(updates);
+
+    // Without a saved list every update looks new
+    if (seen == null) {
+      return;
+    }
+
+    const newUpdates = updates.filter((u) => !seen.includes(u)).reverse();
+
+    this.messages.push(...newUpdates.map(createUpdateMessage));
+  }
+
+  private async getUpdates(command: "updates" | "trivial"): Promise<string[]> {
+    const response = await this.visitUrl("submitnewchat.php", {
+      graf: `/clan /${command}`,
+      j: 1,
+    });
+
+    return parseUpdates(response?.["output"] ?? "");
   }
 
   async processMessage(): Promise<void> {
@@ -877,10 +886,10 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
   async loginWithBackoff() {
     // runExclusive safely locks the block and unlocks it when done (or on error)
-    await this.loginMutex.runExclusive(async () => {
+    const loggedInNow = await this.loginMutex.runExclusive(async () => {
       // Short-circuit if another queued request already logged us in
       if (this.loggedIn()) {
-        return;
+        return false;
       }
 
       let loginAttempts = 0;
@@ -896,7 +905,7 @@ export class KoLClient extends KolProcessor implements ChatChannel {
         if (result === "Success") {
           console.log(`${this.getUsername()} logged in.`);
 
-          return;
+          return true;
         }
 
         if (result === "Maint") {
@@ -921,6 +930,11 @@ export class KoLClient extends KolProcessor implements ChatChannel {
         await new Promise((res) => setTimeout(res, minutesToWait * 60_000));
       }
     });
+
+    // visitUrl inside relayNewUpdates can take loginMutex again
+    if (loggedInNow) {
+      await this.checkUpdateMessages();
+    }
   }
 
   async start(): Promise<void> {

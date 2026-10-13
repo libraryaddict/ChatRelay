@@ -10,6 +10,7 @@ const settingsFile = "./data/Settings.json";
 const modNamesFile = "./data/ModeratorNames.json";
 const reasonsFile = "./data/Reactions.json";
 const channelsFile = "./data/Channels.json";
+const seenUpdatesFile = "./data/SeenUpdates.json";
 
 export class Settings {
   getAccountLogins(): AccountLogins {
@@ -39,6 +40,18 @@ export class Settings {
 
   setModNames(modNames: ModeratorName[]) {
     writeFileSync(modNamesFile, JSON.stringify(modNames), "utf-8");
+  }
+
+  getSeenUpdates(): string[] | undefined {
+    if (!existsSync(seenUpdatesFile)) {
+      return undefined;
+    }
+
+    return JSON.parse(readFileSync(seenUpdatesFile, "utf-8"));
+  }
+
+  setSeenUpdates(updates: string[]) {
+    writeFileSync(seenUpdatesFile, JSON.stringify(updates), "utf-8");
   }
 
   getChannelIds(): ChannelId[] {

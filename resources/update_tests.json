@@ -1,0 +1,28 @@
+[
+  {
+    "response": {
+      "output": "<hr><font color=green><b>Recent Trivial Updates:</b></font></center><br><b>September 03 - </b>Combat macros now have support for \"lenient\" mode, an environment predicate, and a usequeue command.  Happy scripting.<br><b>August 17 - </b>Rollover will be a little longer that normal tonight, hopefully only 10-15 minutes, we have some maintenance to perform.<br><b>August 12 - </b>Belatedly, the raffle has new second prizes and a refreshed first prize pool that includes Mr. Store items through 2023.<br><b>August 04 - </b>Combat item usage now respects (disallows) the standard date of items you somehow obtain in a date restricted path.<br><b>August 01 - </b>Sources suggest that the Time-Twitching Tower will fade away tomorrow at rollover. (Roughly 38 hours from now.)<br><hr>",
+      "msgs": []
+    },
+    "expected": [
+      "**[System]** Combat macros now have support for \"lenient\" mode, an environment predicate, and a usequeue command. Happy scripting.",
+      "**[System]** Rollover will be a little longer that normal tonight, hopefully only 10-15 minutes, we have some maintenance to perform.",
+      "**[System]** Belatedly, the raffle has new second prizes and a refreshed first prize pool that includes Mr. Store items through 2023.",
+      "**[System]** Combat item usage now respects (disallows) the standard date of items you somehow obtain in a date restricted path.",
+      "**[System]** Sources suggest that the Time-Twitching Tower will fade away tomorrow at rollover. (Roughly 38 hours from now.)"
+    ]
+  },
+  {
+    "response": {
+      "output": "<hr><font color=green><b>Recent Announcements:</b></font></center><br><b>September 30</b> - October's Item-of-the-Month is now in Mr. Store.  Plant the black rosebud and have a daily stroll through your fully immersive, hyper-realistic 3-dimensional rose garden.<br><b>August 31</b> - September's Item-of-the-Month, the meat shield toddler, is now available in Mr. Store. Pick one up for terrarium and watch her grow into a full-blown maiden. <br><b>August 27</b> - We've been doing some optimization, and the nightly maintenance rollover now takes less than 10 seconds.  Saturday's is still longer, but that's our next target.<br><b>August 14</b> - A new challenge path is here and you'll have to pick a side.  Red or Blue?<br><b>March 06</b> - KoL's own Jick wrote a book, a choose-your-own-adventure about escaping from a wizard.  You can <a style=\"text-decoration: underline\" target=_blank href=https://www.amazon.com/Escape-Prison-Tower-Wizard-Adventures/dp/B0CTW34JV1/>buy it on Amazon dot com</a>. <br><hr>",
+      "msgs": []
+    },
+    "expected": [
+      "**[System]** October's Item-of-the-Month is now in Mr. Store. Plant the black rosebud and have a daily stroll through your fully immersive, hyper-realistic 3-dimensional rose garden.",
+      "**[System]** September's Item-of-the-Month, the meat shield toddler, is now available in Mr. Store. Pick one up for terrarium and watch her grow into a full-blown maiden.",
+      "**[System]** We've been doing some optimization, and the nightly maintenance rollover now takes less than 10 seconds. Saturday's is still longer, but that's our next target.",
+      "**[System]** A new challenge path is here and you'll have to pick a side. Red or Blue?",
+      "**[System]** KoL's own Jick wrote a book, a choose-your-own-adventure about escaping from a wizard. You can [buy it on Amazon dot com](<https://www.amazon.com/Escape-Prison-Tower-Wizard-Adventures/dp/B0CTW34JV1/>)."
+    ]
+  }
+]

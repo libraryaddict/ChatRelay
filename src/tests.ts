@@ -3,10 +3,23 @@
 import { readFileSync } from "fs";
 import { KOLMessage, PublicMessageType } from "./utils/Typings";
 import {
+  createUpdateMessage,
   formatMessage,
   getPublicMessageType,
+  parseUpdates,
   removeKolEmote as removeKolMeEmote,
 } from "./utils/Utils";
+
+function formatKolMessage(message: KOLMessage, sender: string) {
+  let msg = message.msg;
+  const type: PublicMessageType = getPublicMessageType(message);
+
+  if (type === "emote") {
+    msg = removeKolMeEmote(sender, msg);
+  }
+
+  return formatMessage(sender, msg, type, false, "KoL");
+}
 
 // I ultimately end up trying to test stuff anyways
 export function runTests() {
@@ -27,14 +40,7 @@ export function runTests() {
       const message: KOLMessage = JSON.parse(rawJson);
       const sender =
         (testsText[i].replace("Sender: ", "") || message.who?.name) ?? "N/A";
-      let msg = message.msg;
-      const type: PublicMessageType = getPublicMessageType(message);
-
-      if (type === "emote") {
-        msg = removeKolMeEmote(sender, msg);
-      }
-
-      const formatted = formatMessage(sender, msg, type, false, "KoL");
+      const formatted = formatKolMessage(message, sender);
       const kolMsg = formatted.kolPrefix + formatted.kolMessage;
 
       if (
@@ -74,4 +80,33 @@ export function runTests() {
   console.log(`Tests Passed: ${passed} / ${failed + passed}`);
 }
 
+export function runUpdateTests() {
+  const tests: { response: { output: string }; expected: string[] }[] =
+    JSON.parse(readFileSync("resources/update_tests.json", "utf-8"));
+
+  let failed = 0;
+
+  for (const test of tests) {
+    const parsed = parseUpdates(test.response.output)
+      .map(createUpdateMessage)
+      .map((m) => formatKolMessage(m, m.who.name).discordMessage);
+
+    if (JSON.stringify(parsed) === JSON.stringify(test.expected)) {
+      continue;
+    }
+
+    failed++;
+    console.log("=======================");
+    console.log("Update Test Failed!");
+    console.log(`Our parsed output:\t${JSON.stringify(parsed)}`);
+    console.log(`Expected:\t${JSON.stringify(test.expected)}`);
+  }
+
+  console.log(`Update Tests Failed: ${failed}`);
+  console.log(
+    `Update Tests Passed: ${tests.length - failed} / ${tests.length}`,
+  );
+}
+
 runTests();
+runUpdateTests();

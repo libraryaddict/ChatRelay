@@ -88,14 +88,17 @@ export function isRolloverMessage(message: KOLMessage): boolean {
   );
 }
 
-export function isReplaceableUpdateMessage(message: KOLMessage) {
-  return (
-    message.type == "system" &&
-    message.msg &&
-    /A new [a-z]+ has been posted. Use the \/updates command to read it./is.test(
-      message.msg,
-    )
+export function parseUpdates(output: string): string[] {
+  // Announcements bold "May 01", trivial updates bold "May 01 - "
+  const entries = output.matchAll(
+    /<b>[a-z]+ \d+(?:<\/b> - | - <\/b>)(.*?)<br>(?=<b>|<hr>)/gi,
   );
+
+  return [...entries].map((m) => m[1].trim());
+}
+
+export function createUpdateMessage(update: string): KOLMessage {
+  return { type: "system", msg: update, who: { name: "System", id: "1" } };
 }
 
 export function isUpdateMessage(message: KOLMessage) {
@@ -103,7 +106,8 @@ export function isUpdateMessage(message: KOLMessage) {
   return (
     message.type == "system" &&
     message.msg &&
-    /Use the \/updates command to read it./.test(message.msg)
+    (/Use the \/updates command to read it./.test(message.msg) ||
+      message.msg.startsWith("A new trivial update has been posted: "))
     //    message.msg ==
     //    "A new update has been posted. Use the /updates command to read it."
   );

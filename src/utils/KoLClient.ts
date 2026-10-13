@@ -30,6 +30,7 @@ import { Mutex } from "async-mutex";
 import { KolProcessor } from "./KoLProcessor";
 import { createClient } from "./network";
 import { Settings } from "../Settings";
+import { startRelayServer } from "./RelayServer";
 
 const FOR_WHO = `DiscordChat (Maintained by irrat)`;
 
@@ -88,6 +89,10 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
   getChatManager(): ChatManager {
     return this.chatManager;
+  }
+
+  startRelay(port: number) {
+    startRelayServer(port, this.getUsername(), this.axios);
   }
 
   async doStatusCheck() {

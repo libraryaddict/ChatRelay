@@ -72,11 +72,111 @@ The second is a list of kol accounts that this bot will use.
 
 The `username` and `password` is obvious for kol account, the `type` has no real meaning to it. But if its set to `IGNORE` then the bot will not log into the account.
 
+An account can also set `relayPort`, which starts a relay server on that port. Opening `http://localhost:<port>` in a browser lets you play as that account using the bot's session, anyone who can reach the port can too.
+
 The last is `ignoreChat` which tells the bot to ignore any messages said by these kol players
 
 # Other stuff
 
 The bot will attempt to remove chat effects on itself, but it must be stocked with soft green antidote to remove it. The bot will/should send messages to clan if a clan chat is registered, and to discord clan. If there is no clan chat, it will log it, but not do anything.
+
+# Running with Docker
+
+Docker runs the bot in a self-contained box called a container. You don't need to install Node.js or build anything yourself, and the bot restarts automatically if it crashes or the computer reboots.
+
+## 1. Install Docker
+
+- **Windows or Mac:** install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and start it. Leave it running while you use the bot.
+- **Linux:** install Docker Engine by following the guide for your distribution at <https://docs.docker.com/engine/install/>.
+
+To check that it works, open a terminal (on Windows, use PowerShell) and run:
+
+```
+docker --version
+```
+
+If that prints a version number, Docker is installed.
+
+## 2. Get the bot
+
+Download this project and open a terminal in its folder. That's the folder containing `Dockerfile` and `docker-compose.yml`. All of the commands below are run from this folder.
+
+## 3. Set up your settings
+
+Copy the `data-example` folder and name the copy `data`. Then edit the files inside `data` as described in the sections above (Channels.json, Reactions.json and Settings).
+
+The bot reads everything from the `data` folder, and it saves its own files there too. Whenever you change a setting, restart the bot (step 6) so it picks up the change.
+
+## 4. Start the bot
+
+```
+docker compose up -d --build
+```
+
+The first run takes a few minutes while Docker downloads and builds everything. After that, the bot runs in the background, so you can close the terminal.
+
+## 5. Check that it's working
+
+To see what the bot is printing:
+
+```
+docker compose logs -f
+```
+
+Press Ctrl+C to stop watching. That only closes the log view, and the bot keeps running.
+
+To see whether the bot is running:
+
+```
+docker compose ps
+```
+
+The `STATUS` column shows `Up` while it's running, followed by `healthy` or `unhealthy`. The health check section below explains what that means.
+
+## 6. Stop, restart and update
+
+- To stop the bot: `docker compose down`
+- To restart it after changing settings: `docker compose restart`
+- To update to a newer version, download the new version of this project into the same folder, keeping your `data` folder, then run `docker compose up -d --build` again.
+
+## The relay server
+
+The relay server is optional. It lets remote into a logged in bot account using your browser so that you can check on it or play without turning the bot off.
+
+To turn it on, add `"relayPort": 3000` to that account in `data/Settings.json`:
+
+```json
+{
+  "username": "Prince Libraryaddict",
+  "password": "princelib12345",
+  "type": "PUBLIC",
+  "relayPort": 3000
+}
+```
+
+Restart the bot, then open <http://localhost:3000> in a browser on the same computer.
+
+A port is a number that tells the computer which program a connection is for. Docker only lets connections into the container through the ports listed under `ports` in `docker-compose.yml`. Port 3000 is already listed there. If you want to relay more than one account, give each account a different `relayPort`, for example 3000 and 3001, and add each one to `docker-compose.yml` like this:
+
+```yaml
+ports:
+  - "3000:3000"
+  - "3001:3001"
+```
+
+Anyone who can reach that port will have full control as if they were logged in. That includes other people on your home network. Don't forward the port on your router.
+
+Logging out through the relay also logs the bot out. The bot logs back in by itself.
+
+## Health check
+
+Docker regularly asks each relay server whether it's still answering. If one stops answering, `docker compose ps` shows the bot as `unhealthy`, which is a sign to look at the logs. Docker doesn't restart the bot because of this.
+
+If no account has a `relayPort`, there's nothing to check, and the bot always shows as `healthy`.
+
+## The database
+
+The bot only uses a database for player logging. That needs both `playerLoggingAccount` and `discordToken` in `Settings.json`. When both are set, the bot creates `data/database.db` and keeps it up to date by itself. Back that file up along with the rest of the `data` folder.
 
 # Afternotes
 

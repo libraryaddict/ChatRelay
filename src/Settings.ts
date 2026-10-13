@@ -191,6 +191,7 @@ export type KolLogin = {
   username: string;
   password: string;
   type: KolAccountType;
+  relayPort?: number;
 };
 
 export type AccountLogins = {

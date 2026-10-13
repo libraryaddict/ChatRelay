@@ -87,6 +87,10 @@ export class ChatManager {
         kolAccount.type
       );
 
+      if (kolAccount.relayPort) {
+        account.startRelay(kolAccount.relayPort);
+      }
+
       if (kolAccount.username == settings.playerLoggingAccount) {
         loggingAccount = account;
       }

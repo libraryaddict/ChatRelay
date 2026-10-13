@@ -1,0 +1,8 @@
+services:
+  chatbot:
+    build: .
+    restart: unless-stopped
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "3000:3000"

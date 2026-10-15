@@ -8,6 +8,7 @@
     "declaration": false,
     "forceConsistentCasingInFileNames": true,
     "module": "commonjs",
+    "esModuleInterop": true,
     "noEmitOnError": true,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,

@@ -137,6 +137,7 @@ The `STATUS` column shows `Up` while it's running, followed by `healthy` or `unh
 
 - To stop the bot: `docker compose down`
 - To restart it after changing settings: `docker compose restart`
+- To apply a change to `docker-compose.yml`, such as a new port: `docker compose up -d`. A plain restart keeps the old ports.
 - To update to a newer version, download the new version of this project into the same folder, keeping your `data` folder, then run `docker compose up -d --build` again.
 
 ## The relay server
@@ -163,6 +164,8 @@ ports:
   - "3000:3000"
   - "3001:3001"
 ```
+
+Then run `docker compose up -d` so Docker opens the new ports. `docker compose restart` isn't enough for this, because it keeps the ports the container was created with.
 
 Anyone who can reach that port will have full control as if they were logged in. That includes other people on your home network. Don't forward the port on your router.
 

@@ -936,8 +936,9 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       }
     });
 
-    // visitUrl inside relayNewUpdates can take loginMutex again
+    // visitUrl inside these can take loginMutex again
     if (loggedInNow) {
+      await this.doInitialChannelJoining();
       await this.checkUpdateMessages();
     }
   }
@@ -946,7 +947,6 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     console.log("Starting " + this.getUsername() + "...");
 
     await this.loginWithBackoff()
-      .then(() => this.doInitialChannelJoining())
       .then(async () => {
         const secondsToRollover = getSecondsToRollover();
 

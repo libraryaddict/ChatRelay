@@ -1,5 +1,4 @@
 import { DiscordHandler } from "./DiscordHandler";
-import { DiscordLoggingHandler } from "./logging/DiscordLoggingHandler";
 import { Settings } from "./Settings";
 import { KoLClient } from "./utils/KoLClient";
 import { RemoteKolClient } from "./utils/RemoteKoLClient";
@@ -126,6 +125,9 @@ export class ChatManager {
 
     if (loggingAccount != null && discord != null) {
       Promise.allSettled(startups).then(() => {
+        // 'require' stops default tsc from compiling src/logging
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { DiscordLoggingHandler } = require("./logging/DiscordLoggingHandler");
         new DiscordLoggingHandler(
           loggingAccount as KoLClient,
           discord as DiscordHandler

@@ -14,10 +14,12 @@
     "noImplicitReturns": true,
     "strictPropertyInitialization": false,
     "pretty": true,
+    "skipLibCheck": true,
     "strict": false,
     "lib": ["esnext"],
     "target": "esnext"
   },
   "include": ["src/**/*.ts"],
+  "exclude": ["src/logging"],
   "isolatedModules": true /* Transpile each file as a separate module (similar to 'ts.transpileModule'). */
 }

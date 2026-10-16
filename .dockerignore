@@ -5,3 +5,4 @@ data
 error.log
 .git
 .vscode
+*.tsbuildinfo

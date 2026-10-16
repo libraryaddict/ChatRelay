@@ -17,32 +17,35 @@
   "author": "Irrat",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.19.1",
-    "async-mutex": "0.4.0 ",
-    "axios": "1.4.0",
-    "discord.js": "^14.18.0",
-    "eslint-plugin-jest": "^27.8.0",
+    "async-mutex": "^0.5.0",
+    "axios": "^1.20.0",
+    "discord.js": "^14.27.0",
+    "eslint-plugin-jest": "^29.17.0",
     "express": "^5.3.0",
-    "html-entities": "^2.4.0",
-    "http-cookie-agent": "^7.0.3",
-    "node-emoji": "^2.1.0",
-    "prisma": "^5.19.1",
-    "tough-cookie": "^6.0.1"
+    "html-entities": "^2.6.0",
+    "http-cookie-agent": "^8.0.0",
+    "node-emoji": "^2.2.0",
+    "tough-cookie": "^6.0.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
-    "@types/jest": "^29.5.12",
-    "@types/node": "^20.4.9",
-    "@types/ws": "^8.5.5",
-    "@typescript-eslint/eslint-plugin": "^6.4.1",
-    "@typescript-eslint/parser": "^6.4.1",
-    "eslint": "^8.48.0",
-    "eslint-config-prettier": "^8.9.0",
-    "eslint-plugin-json-format": "^2.0.1",
-    "eslint-plugin-prettier": "4.2.1",
-    "eslint-plugin-unused-imports": "^3.0.0",
-    "prettier": "^2.8.8",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.1.6"
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.19.2",
+    "@types/ws": "^8.18.2",
+    "@typescript-eslint/eslint-plugin": "^8.71.2",
+    "@typescript-eslint/parser": "^8.71.2",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.7",
+    "eslint-plugin-unused-imports": "^4.4.1",
+    "prettier": "^3.9.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  },
+  "optionalDependencies": {
+    "@prisma/adapter-better-sqlite3": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "prisma": "^7.10.1"
   }
 }

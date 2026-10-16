@@ -1,6 +1,9 @@
+import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { LoggingEditor, LoggingTarget, PrismaClient } from "@prisma/client";
 
-const prisma: PrismaClient = new PrismaClient();
+const prisma: PrismaClient = new PrismaClient({
+  adapter: new PrismaBetterSqlite3({ url: process.env.DATABASE_URL })
+});
 
 export async function getLogging(player: number): Promise<LoggingTarget[]> {
   return await prisma.loggingTarget.findMany({

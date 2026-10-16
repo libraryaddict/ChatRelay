@@ -164,7 +164,7 @@ export class DiscordHandler implements ChatChannel {
       partials: [Partials.Channel, Partials.Message]
     });
 
-    this.client.on("ready", () => {
+    this.client.on("clientReady", () => {
       console.log("Discord client logged in!");
     });
     this.client.on("warn", (msg) => console.log("Discord/WARN: " + msg));

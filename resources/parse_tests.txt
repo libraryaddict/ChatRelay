@@ -70,10 +70,10 @@ Sender: Marge (#1469700)
 
 
 {"who":{"name":"System","id":"1","color":"black"},"msg":"Jick made another 7-Day Roguelike this year.  Check it out:  <a href=https:\/\/zapjackson.itch.io\/tic-tac-tomb style=\"text-decoration: underline\" target=_blank>Tic-Tac-Tomb<\/a>."}
-[System] Jick made another 7-Day Roguelike this year. Check it out: https://zapjackson.itch.io/tic-tac-tomb.
-**[System]** Jick made another 7-Day Roguelike this year. Check it out: [Tic-Tac-Tomb](<https://zapjackson.itch.io/tic-tac-tomb>).
+[System Message] Jick made another 7-Day Roguelike this year. Check it out: https://zapjackson.itch.io/tic-tac-tomb.
+**[System Message]** Jick made another 7-Day Roguelike this year. Check it out: [Tic-Tac-Tomb](<https://zapjackson.itch.io/tic-tac-tomb>).
 
 
 {"who":{"name":"System","id":"1","color":"black"},"msg":"Test 2 made another 7-Day Roguelike this year.  Check it out:  <a href=\"https:\/\/zapjackson.itch.io\/tic-tac-tomb\" style=\"text-decoration: underline\" target=_blank>Tic-Tac-Tomb<\/a>."}
-[System] Test 2 made another 7-Day Roguelike this year. Check it out: https://zapjackson.itch.io/tic-tac-tomb.
-**[System]** Test 2 made another 7-Day Roguelike this year. Check it out: [Tic-Tac-Tomb](<https://zapjackson.itch.io/tic-tac-tomb>).
+[System Message] Test 2 made another 7-Day Roguelike this year. Check it out: https://zapjackson.itch.io/tic-tac-tomb.
+**[System Message]** Test 2 made another 7-Day Roguelike this year. Check it out: [Tic-Tac-Tomb](<https://zapjackson.itch.io/tic-tac-tomb>).

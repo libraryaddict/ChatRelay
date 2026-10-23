@@ -98,7 +98,11 @@ export function parseUpdates(output: string): string[] {
 }
 
 export function createUpdateMessage(update: string): KOLMessage {
-  return { type: "system", msg: update, who: { name: "System", id: "1" } };
+  return {
+    type: "system",
+    msg: update,
+    who: { name: "System Message", id: "1" },
+  };
 }
 
 export function isUpdateMessage(message: KOLMessage) {
@@ -438,7 +442,7 @@ export function formatMessage(
   allowLinkPreviews: boolean,
   source: ServerSide,
 ): FormattedMessage {
-  const senderName = type === "system" ? "System" : sender;
+  const senderName = type === "system" ? "System Message" : sender;
 
   const kolMessage = cleanupKolMessage(
     message,

@@ -91,7 +91,7 @@ export function isRolloverMessage(message: KOLMessage): boolean {
 export function parseUpdates(output: string): string[] {
   // Announcements bold "May 01", trivial updates bold "May 01 - "
   const entries = output.matchAll(
-    /<b>[a-z]+ \d+(?:<\/b> - | - <\/b>)(.*?)<br>(?=<b>|<hr>)/gi,
+    /<b>[a-z]+ \d+(?:<\/b> - | - <\/b>)(.*?)<(?:p|br)>(?=<b>|<hr>)/gi,
   );
 
   return [...entries].map((m) => m[1].trim());

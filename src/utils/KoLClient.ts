@@ -273,9 +273,8 @@ export class KoLClient extends KolProcessor implements ChatChannel {
       await this.checkFortuneTeller();
     }
 
-    if (isUpdateMessage(message)) {
+    if (isUpdateMessage(message) && (await this.checkUpdateMessages())) {
       message.msg = undefined;
-      await this.checkUpdateMessages();
     }
   }
 
@@ -832,16 +831,16 @@ export class KoLClient extends KolProcessor implements ChatChannel {
     await Promise.allSettled(promises);
   }
 
-  private async checkUpdateMessages() {
+  private async checkUpdateMessages(): Promise<boolean> {
     if (!this.channels.some((c) => c.holderId == "system")) {
-      return;
+      return false;
     }
 
     const announcements = await this.getUpdates("updates");
     const trivialUpdates = await this.getUpdates("trivial");
 
     if (announcements.length == 0 || trivialUpdates.length == 0) {
-      return;
+      return false;
     }
 
     const updates = [...announcements, ...trivialUpdates];
@@ -851,12 +850,14 @@ export class KoLClient extends KolProcessor implements ChatChannel {
 
     // Without a saved list every update looks new
     if (seen == null) {
-      return;
+      return false;
     }
 
     const newUpdates = updates.filter((u) => !seen.includes(u)).reverse();
 
     this.messages.push(...newUpdates.map(createUpdateMessage));
+
+    return true;
   }
 
   private async getUpdates(command: "updates" | "trivial"): Promise<string[]> {

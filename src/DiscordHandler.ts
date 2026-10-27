@@ -4,13 +4,13 @@ import {
   Message,
   OmitPartialGroupDMChannel,
   Partials,
-  WebhookClient
+  WebhookClient,
 } from "discord.js";
 import {
   ChannelId,
   ChatChannel,
   ChatMessage,
-  PublicMessageType
+  PublicMessageType,
 } from "./utils/Typings";
 import { ChatManager } from "./ChatManager";
 import { unemojify } from "node-emoji";
@@ -23,8 +23,9 @@ export class DiscordHandler implements ChatChannel {
   token: string;
   mutex: Mutex = new Mutex();
   noEmbeds: string[] = [];
+  reconnectAt: number;
   directMessageHandler: (
-    message: OmitPartialGroupDMChannel<Message<boolean>>
+    message: OmitPartialGroupDMChannel<Message<boolean>>,
   ) => void;
 
   constructor(chatManager: ChatManager, token: string) {
@@ -39,7 +40,7 @@ export class DiscordHandler implements ChatChannel {
   async sendMessageToChannel(
     target: ChannelId,
     message: ChatMessage,
-    withEmbeds: boolean = true
+    withEmbeds: boolean = true,
   ) {
     // If this is exclusive, and it is not for discord
     if (message.exclusiveTo && message.exclusiveTo != "Discord") {
@@ -60,7 +61,7 @@ export class DiscordHandler implements ChatChannel {
           `Unable to send message to discord, discord ain't available (
             ${
               this.client == null ? "null client" : "client says it isn't ready"
-            }) - Try resetting bot token?`
+            }) - Try resetting bot token?`,
         );
 
         return;
@@ -91,7 +92,7 @@ export class DiscordHandler implements ChatChannel {
         embeds.push({
           title: formatted.embedTitle,
           color: formatted.embedColor,
-          description: formatted.embedDescription
+          description: formatted.embedDescription,
         });
       } else {
         msg = formatted.discordMessage;
@@ -107,22 +108,22 @@ export class DiscordHandler implements ChatChannel {
             content: msg,
             embeds: embeds,
             options: {
-              allowedMentions: {}
+              allowedMentions: {},
             },
-            allowedMentions: {}
+            allowedMentions: {},
           });
         } else if (channel.isSendable()) {
           await channel.send({
             content: msg,
             embeds: embeds,
             options: {
-              allowedMentions: {}
+              allowedMentions: {},
             },
-            allowedMentions: {}
+            allowedMentions: {},
           });
         } else {
           console.log(
-            "Cannot send to " + channel + ", isSendable() reported false"
+            "Cannot send to " + channel + ", isSendable() reported false",
           );
         }
       } catch (e) {
@@ -148,6 +149,39 @@ export class DiscordHandler implements ChatChannel {
   }
 
   async start(): Promise<void> {
+    await this.connect();
+
+    setInterval(() => {
+      if (this.client.isReady()) {
+        this.reconnectAt = undefined;
+
+        return;
+      }
+
+      if (!this.reconnectAt) {
+        // Give discord 5 minutes to reconnect by itself
+        this.reconnectAt = Date.now() + 1000 * 60 * 5;
+      }
+
+      if (this.reconnectAt > Date.now()) {
+        return;
+      }
+
+      this.reconnectAt = undefined;
+      console.log("Discord.js still isn't ready, logging in again..");
+
+      this.mutex.runExclusive(async () => {
+        try {
+          await this.client.destroy();
+          await this.connect();
+        } catch (e) {
+          console.error("Failed to log back into discord: " + e);
+        }
+      });
+    }, 60_000);
+  }
+
+  async connect(): Promise<void> {
     console.log("Starting discord client..");
 
     this.client = new Client({
@@ -159,9 +193,9 @@ export class DiscordHandler implements ChatChannel {
         "GuildModeration",
         "MessageContent",
         "GuildWebhooks",
-        "DirectMessages"
+        "DirectMessages",
       ],
-      partials: [Partials.Channel, Partials.Message]
+      partials: [Partials.Channel, Partials.Message],
     });
 
     this.client.on("clientReady", () => {
@@ -169,6 +203,12 @@ export class DiscordHandler implements ChatChannel {
     });
     this.client.on("warn", (msg) => console.log("Discord/WARN: " + msg));
     this.client.on("error", (msg) => console.log("Discord/ERROR: " + msg));
+    this.client.on("shardDisconnect", (event) =>
+      console.log("Discord disconnect: " + event.code),
+    );
+    this.client.on("shardError", (msg) =>
+      console.log("Discord shard error: " + msg),
+    );
 
     console.log("Discord Client now logging in..");
     await this.client.login(this.token);
@@ -198,7 +238,7 @@ export class DiscordHandler implements ChatChannel {
 
       const channelId = this.chatManager.getChannelId(
         message.guildId,
-        message.channelId
+        message.channelId,
       );
 
       if (channelId == null) {
@@ -221,7 +261,7 @@ export class DiscordHandler implements ChatChannel {
         ["“", '"'],
         ["”", '"'],
         ["‘", "'"],
-        ["’", "'"]
+        ["’", "'"],
       ]) {
         msg = msg.replaceAll(p1, p2);
       }
@@ -237,7 +277,7 @@ export class DiscordHandler implements ChatChannel {
       this.chatManager.onChat({
         from: channelId,
         sender: sender,
-        message: formatMessage(sender, msg, format, true, "Discord")
+        message: formatMessage(sender, msg, format, true, "Discord"),
       });
     });
   }
